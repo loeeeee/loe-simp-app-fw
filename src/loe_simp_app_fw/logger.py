@@ -2,10 +2,30 @@ import os
 import datetime
 from . import helper
 
+# Do not write the Log until the explicit initialization of the logger
+
 class Logger:
+    # Following parameters should be set at the top-level environment of the project
+    _project_root_path = ""
+    _log_folder_path = "" # The path of _example_config_path relative to _project_root_path
     
+    # Internal variable
+    _log_buffer = []
+    _isInit = False
+    _file_name = f"{datetime.date.today()}.log"
+
+    @staticmethod
+    def _log_location():
+        return os.path.join(Logger._project_root_path, Logger._log_folder_path, Logger._file_name)
+
+    def __init__(self, log_folder_path: str):
+        Logger._log_folder_path = log_folder_path
+        
+        _isInit = True
+        pass
+
+
     main_file_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-    file_name = f"{main_file_path}/log/{datetime.date.today()}.log"
 
     # Checking if log folder exists. If not, create a new one.abs
     folder_name = f"{main_file_path}/log/"

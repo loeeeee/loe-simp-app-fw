@@ -66,14 +66,21 @@ if not isNotebook():
     config_dir = args.config
 
 # Result of the Parse CLI or not
-if config_dir and config_dir.startswith("/"):
+if config_dir.startswith("/"):
     # Start from root
-    file_path = config_dir
-else:
+    Logger.info(f"Loading config from {config_dir}")
+elif not config_dir.startswith("/"):
     # Start from current working dir
-    file_path = f"{current_working_dir}/{config_dir}" if config_dir else f"{current_working_dir}/config.yaml"
+    config_dir = f"{current_working_dir}/{config_dir}"
+    Logger.info(f"Loading config from {config_dir}")
+else:
+    Logger.debug("No config information can be inffered from the CLI")
     
 # -------------------------------
+
+class ProjectRootChanged(Exception):
+    def __init__(self):
+        pass
 
 class Config:
     # Following parameters should be set at the top-level environment of the project
@@ -83,12 +90,35 @@ class Config:
     # Following variable will be loaded dynamically
     config = {}
 
-    def __init__(self, config_path: str = file_path):
+    def __init__(self, config_path: str, project_root_path: str = os.getcwd(), example_config_path: str = ""):
+        """Load config file from given path
+
+        Args:
+            config_path (str): path to config, should be a yaml
+            project_root_path (str, optional): path to project top level. Defaults to current working directory.
+            example_config_path (str, optional): path to config example. Defaults to "".
+        """
+        # Senity check
+        ## No on-the-fly update of project root path
+        if Config._project_root_path and project_root_path and project_root_path != Config._project_root_path:
+            Logger.error("One should not change project root path twice")
+            raise ProjectRootChanged
+
+        ## Check example config file
+        if not example_config_path or not os.path.isfile(example_config_path):
+            Logger.warning("Example config path not valid")
+
+        ## Check config path
+        if not os.path.isfile(config_path):
+            Logger.error(f"{config_path} is not valid file.")
+
+        # Do the loading
         Config.config["project root path"] = Config._project_root_path
         Config.config = Config.config | self._load_config(config_path) # Combine two dict
         
     def _load_config(self, path: str) -> dict:
         config = None
+        abs_example_config_path = os.path.join(Config._project_root_path, Config._example_config_path)
         # Copy config file is no local one exists
         if os.path.isfile(path):
             Logger.debug("Config already exists, skips copying.")
@@ -99,7 +129,6 @@ class Config:
             Logger.debug("Load local config successfully.")
             Logger.debug(f"Config: {json.dumps(config, indent=2)}")
         else:
-            abs_example_config_path = os.path.join(Config._project_root_path, Config._example_config_path)
             Logger.debug(f"Absolute path of example config: {abs_example_config_path}")
             with open(abs_example_config_path, "r", encoding="utf-8") as f:
                 config = yaml.safe_load(f)
@@ -123,8 +152,14 @@ class Config:
         # Check if dev mode
         if config["developer mode"]:
             Logger.warning("Start in developer mode! Config file is override by example config file")
-            with open(example_file_path, "r", encoding="utf-8") as f:
+            with open(abs_example_config_path, "r", encoding="utf-8") as f:
                 config = yaml.safe_load(f)
             Logger.debug(f"Config: {json.dumps(config, indent=2)}")
         
         return config
+
+# -------------------------------
+
+# Init Config if CLI arguments are parsed successfully
+if __name__ != "__main__":
+    Config(config_dir)
