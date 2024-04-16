@@ -34,6 +34,10 @@ Load config
 current_working_dir = os.getcwd()
 
 # -------------------------------
+
+# Setup flags
+isCLI = False
+
 # Parse CLI or not
 def isNotebook() -> bool:
     try:
@@ -70,12 +74,15 @@ if not isNotebook():
 if config_dir.startswith("/"):
     # Start from root
     Logger.info(f"Loading config from {config_dir}")
-elif not config_dir.startswith("/"):
+    isCLI = True
+elif not config_dir.startswith("/") and config_dir:
     # Start from current working dir
     config_dir = f"{current_working_dir}/{config_dir}"
     Logger.info(f"Loading config from {config_dir}")
+    isCLI = True
 else:
     Logger.debug("No config information can be inffered from the CLI")
+# print(f"isCLI is {isCLI}")
     
 # -------------------------------
 
@@ -87,7 +94,7 @@ class Config:
     # Following variable will be loaded dynamically
     config = {}
 
-    def __init__(self, config_path: str, project_root_path: str = os.getcwd(), example_config_path: str = ""):
+    def __init__(self, config_path: str, project_root_path: str=current_working_dir, example_config_path: str=""):
         """Load config file from given path
 
         Args:
@@ -95,6 +102,7 @@ class Config:
             project_root_path (str, optional): path to project top level. Defaults to current working directory.
             example_config_path (str, optional): path to config example. Defaults to "".
         """
+        print(f"Example config path: {example_config_path}")
         # Senity check
         ## No on-the-fly update of project root path
         if Config._project_root_path and project_root_path and os.path.samefile(project_root_path, Config._project_root_path):
@@ -102,7 +110,6 @@ class Config:
             raise ProjectRootChanged
 
         ## Check example config file
-        print(example_config_path)
         if not example_config_path or not os.path.isfile(example_config_path):
             Logger.warning("Example config path not valid")
 
@@ -162,5 +169,5 @@ class Config:
 # -------------------------------
 
 # Init Config if CLI arguments are parsed successfully
-if __name__ != "__main__":
+if __name__ != "__main__" and isCLI:
     Config(config_dir)

@@ -164,3 +164,4 @@ cython_debug/
 playground*
 config*.yaml
 !config-example.yaml
+log
