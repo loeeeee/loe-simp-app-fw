@@ -4,6 +4,8 @@ A super simple python app framework that includes a logger and a config manager.
 
 ## Example
 
+### Loading
+
 ```python
 import os
 
@@ -31,8 +33,7 @@ The log file will be at
 ```bash
 [project root path]/"log"/yyyy-mm-dd.log
 ```
-
-## Usage
+### Basic Usage
 
 Logger usage
 
@@ -49,7 +50,7 @@ Config usage
 something = Config.config["package root path"]
 ```
 
-## Advance Usage
+### Advance Usage
 
 Config hot reload
 
@@ -57,7 +58,7 @@ Config hot reload
 Config("another-config.yaml")
 ```
 
-## Gitignore
+### .gitignore
 
 ```.gitignore
 log/
