@@ -4,6 +4,22 @@ A super simple python app framework that includes a logger and a config manager.
 
 ## Example
 
+a typical project that uses this framework
+
+```
+project
+├── config-example.yaml
+├── config.yaml
+├── LICENSE
+├── log
+│   └── 2024-04-16.log
+├── README.md
+├── src
+│   └── main.py
+└── tests
+    └── test_import.py
+```
+
 ### Loading
 
 ```python
