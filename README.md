@@ -1,13 +1,32 @@
 # loe-simp-app-fw
 A super simple python app framework that includes a logger and a config management
 
-## Behavior
+## Example
 
-When the package is imported in other modules,
+```python
+import os
 
-- duplicate a config sample located in the project root folder
-- read from config file in the project root path
+from loe_simp_app_fw.config import Config
+from loe_simp_app_fw.logger import Logger
 
-## Ethics
+Config("config.yaml", example_config_path="config-example.yaml", project_root_path=os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+Logger("log", project_root_path=os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+```
 
-> For most cases, packages and modules shouldn't need to care about or depend on the calling environment's location; they should be designed to function independently of where and how they are called.
+It will read from 
+
+```bash
+[project root path]/"config.yaml"
+```
+
+The example config is located at
+
+```bash
+[project root path]/"config-example.yaml"
+```
+
+The log file will be at
+
+```bash
+[project root path]/"log"/yyyy-mm-dd.log
+```
