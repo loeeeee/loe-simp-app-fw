@@ -1,5 +1,6 @@
 # loe-simp-app-fw
-A super simple python app framework that includes a logger and a config management
+
+A super simple python app framework that includes a logger and a config manager. This framework is also useable in Jupyter Notebook.
 
 ## Example
 
@@ -29,4 +30,37 @@ The log file will be at
 
 ```bash
 [project root path]/"log"/yyyy-mm-dd.log
+```
+
+## Usage
+
+Logger usage
+
+```python
+Logger.debug("This is a debug message.")
+Logger.info("This is a info message.")
+Logger.warning("This is a warning message.")
+Logger.error("This is a error message.")
+```
+
+Config usage
+
+```python
+something = Config.config["package root path"]
+```
+
+## Advance Usage
+
+Config hot reload
+
+```python
+Config("another-config.yaml")
+```
+
+## Gitignore
+
+```.gitignore
+log/
+config*.yaml
+!config-example.yaml
 ```
