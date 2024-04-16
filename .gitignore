@@ -162,3 +162,5 @@ cython_debug/
 # Personal
 *.ipynb
 playground*
+config*.yaml
+!config-example.yaml

@@ -23,4 +23,9 @@ else:
             logger.Logger.info("Folder does not exists. Creating a new one.")
         else:
             logger.Logger.debug("Folder exists. No further action.")
-            
+
+def remove_duplicate_space(input_str: str) -> str:
+    # Remove excessive space
+    reg = r'\s+'
+    result = re.sub(reg, " ", input_str).strip()
+    return result
