@@ -3,6 +3,7 @@ import json
 import os
 import sys
 from .logger import Logger
+from .helper import ProjectRootChanged
 
 from argparse import ArgumentParser
 
@@ -78,10 +79,6 @@ else:
     
 # -------------------------------
 
-class ProjectRootChanged(Exception):
-    def __init__(self):
-        pass
-
 class Config:
     # Following parameters should be set at the top-level environment of the project
     _project_root_path = ""
@@ -94,31 +91,35 @@ class Config:
         """Load config file from given path
 
         Args:
-            config_path (str): path to config, should be a yaml
+            config_path (str): path to config, should be a yaml file
             project_root_path (str, optional): path to project top level. Defaults to current working directory.
             example_config_path (str, optional): path to config example. Defaults to "".
         """
         # Senity check
         ## No on-the-fly update of project root path
-        if Config._project_root_path and project_root_path and project_root_path != Config._project_root_path:
+        if Config._project_root_path and project_root_path and os.path.samefile(project_root_path, Config._project_root_path):
             Logger.error("One should not change project root path twice")
             raise ProjectRootChanged
 
         ## Check example config file
+        print(example_config_path)
         if not example_config_path or not os.path.isfile(example_config_path):
             Logger.warning("Example config path not valid")
 
         ## Check config path
         if not os.path.isfile(config_path):
-            Logger.error(f"{config_path} is not valid file.")
+            Logger.error(f"{config_path} is not valid file.")        
 
         # Do the loading
+        Config._project_root_path = project_root_path
+        Config._example_config_path = example_config_path
         Config.config["project root path"] = Config._project_root_path
         Config.config = Config.config | self._load_config(config_path) # Combine two dict
         
     def _load_config(self, path: str) -> dict:
         config = None
         abs_example_config_path = os.path.join(Config._project_root_path, Config._example_config_path)
+        Logger.debug(f"Example config path is {abs_example_config_path}")
         # Copy config file is no local one exists
         if os.path.isfile(path):
             Logger.debug("Config already exists, skips copying.")

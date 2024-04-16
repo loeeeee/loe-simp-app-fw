@@ -29,3 +29,8 @@ def remove_duplicate_space(input_str: str) -> str:
     reg = r'\s+'
     result = re.sub(reg, " ", input_str).strip()
     return result
+
+
+class ProjectRootChanged(Exception):
+    def __init__(self):
+        pass
