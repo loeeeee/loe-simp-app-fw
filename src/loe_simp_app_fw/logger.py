@@ -82,8 +82,11 @@ class Logger:
         composed_log_entry = f"{datetime.datetime.now()} {level.upper()}: {msg}\n"
         if Logger._isInit:
             # Write to file
-            with open(Logger._log_location, "a", encoding="utf-8") as f:
-                f.writelines(composed_log_entry)
+            try:
+                with open(Logger._log_location, "a", encoding="utf-8") as f:
+                    f.writelines(composed_log_entry)
+            except FileNotFoundError:
+                Logger._create_log_file()
         else:
             # Write to buffer, not file
             Logger._log_buffer.append(composed_log_entry)
