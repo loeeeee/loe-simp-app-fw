@@ -94,15 +94,15 @@ class Config:
     # Following variable will be loaded dynamically
     config = {}
 
-    def __init__(self, config_path: str, project_root_path: str=current_working_dir, example_config_path: str=""):
+    def __init__(self, config_path: str, project_root_path: str=current_working_dir, example_config_path: str="config-example.yaml", respect_CLI: bool=False):
         """Load config file from given path
 
         Args:
             config_path (str): path to config, should be a yaml file
             project_root_path (str, optional): path to project top level. Defaults to current working directory.
             example_config_path (str, optional): path to config example. Defaults to "".
+            respect_CLI (CLI, optional): whether CLI will overwrite the config choice of config_path. Defaults to False.
         """
-        print(f"Example config path: {example_config_path}")
         # Senity check
         ## No on-the-fly update of project root path
         if Config._project_root_path and project_root_path and not os.path.samefile(project_root_path, Config._project_root_path):
@@ -117,13 +117,17 @@ class Config:
 
         ## Check config path
         if not os.path.isfile(config_path):
-            Logger.error(f"{config_path} is not valid file.")        
+            Logger.error(f"{config_path} is not valid file.")
 
-        # Do the loading
-        Config._project_root_path = project_root_path
-        Config._example_config_path = example_config_path
-        Config.config["project root path"] = Config._project_root_path
-        Config.config = Config.config | self._load_config(config_path) # Combine two dict
+        # Do the loading conditionally
+        if respect_CLI and isCLI:
+            Logger.info("Config is already inited by CLI.")
+        else:
+            Logger.info("Config is not init by CLI.")
+            Config._project_root_path = project_root_path
+            Config._example_config_path = example_config_path
+            Config.config["project root path"] = Config._project_root_path
+            Config.config = Config.config | self._load_config(config_path) # Combine two dict
         
     def _load_config(self, path: str) -> dict:
         config = None
