@@ -83,7 +83,7 @@ class Logger:
         if Logger._isInit:
             # Write to file
             try:
-                with open(Logger._log_location, "a", encoding="utf-8") as f:
+                with open(Logger._log_location(), "a", encoding="utf-8") as f:
                     f.writelines(composed_log_entry)
             except FileNotFoundError:
                 Logger._create_log_file()
