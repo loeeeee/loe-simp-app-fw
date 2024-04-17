@@ -57,8 +57,8 @@ class Logger:
         Logger._log_buffer = []
 
         # Update flags
-        _isInit = True
-        print("Logger init process finished.")
+        Logger._isInit = True
+        print(f"Logger init process finished, Logger isInit is set to {Logger._isInit}")
 
     @staticmethod
     def info(msg: str) -> None:
