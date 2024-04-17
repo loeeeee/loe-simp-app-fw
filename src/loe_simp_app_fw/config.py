@@ -105,8 +105,10 @@ class Config:
         print(f"Example config path: {example_config_path}")
         # Senity check
         ## No on-the-fly update of project root path
-        if Config._project_root_path and project_root_path and os.path.samefile(project_root_path, Config._project_root_path):
-            Logger.error("One should not change project root path twice")
+        if Config._project_root_path and project_root_path and not os.path.samefile(project_root_path, Config._project_root_path):
+            Logger.error("One should not change project root path twice.")
+            Logger.error(f"Orignial project root path: {Config._project_root_path}")
+            Logger.error(f"Updated project root path: {project_root_path}")
             raise ProjectRootChanged
 
         ## Check example config file
