@@ -63,7 +63,7 @@ Logger.error("This is a error message.")
 Config usage
 
 ```python
-something = Config.config["package root path"]
+something = Config.config["project root path"]
 ```
 
 ### Advance Usage
