@@ -41,7 +41,7 @@ isCLI = False
 # Parse CLI or not
 def isNotebook() -> bool:
     try:
-        shell = get_ipython().__class__.__name__
+        shell = get_ipython().__class__.__name__ # het_python() is globally available when using jupyter notebook
         if shell == 'ZMQInteractiveShell':
             return True   # Jupyter notebook or qtconsole
         elif shell == 'TerminalInteractiveShell':

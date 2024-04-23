@@ -35,7 +35,7 @@ class Logger:
             ProjectRootChanged: Project root directory should not be changed once set
         """
         # Sanity check
-        if Logger._project_root_path and project_root_path and os.path.samefile(project_root_path, Logger._project_root_path):
+        if Logger._project_root_path and project_root_path and not os.path.samefile(project_root_path, Logger._project_root_path):
             Logger.error("One should not change project root path twice")
             raise ProjectRootChanged
 
