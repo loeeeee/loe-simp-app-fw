@@ -13,15 +13,15 @@ class Logger:
     _log_buffer = []
     _isInit = False
     
-    @staticmethod
-    def _log_location():
+    @classmethod
+    def _log_location(cls):
         file_name = f"{datetime.date.today()}.log"
-        return os.path.join(Logger._project_root_path, Logger._log_folder_path, file_name)
+        return os.path.join(cls._project_root_path, cls._log_folder_path, file_name)
 
-    @staticmethod
-    def _create_log_file():
-        if not os.path.isfile(Logger._log_location()) and not os.path.isdir(Logger._log_location()):
-            with open(Logger._log_location(), "w", encoding="utf-8") as f:
+    @classmethod
+    def _create_log_file(cls):
+        if not os.path.isfile(cls._log_location()) and not os.path.isdir(cls._log_location()):
+            with open(cls._log_location(), "w", encoding="utf-8") as f:
                 print("Create log file successfully.")
 
     def __init__(self, log_folder_path: str, project_root_path: str = os.getcwd()):
@@ -35,61 +35,61 @@ class Logger:
             ProjectRootChanged: Project root directory should not be changed once set
         """
         # Sanity check
-        if Logger._project_root_path and project_root_path and not os.path.samefile(project_root_path, Logger._project_root_path):
-            Logger.error("One should not change project root path twice")
+        if self._project_root_path and project_root_path and not os.path.samefile(project_root_path, self._project_root_path):
+            self.error("One should not change project root path twice")
             raise ProjectRootChanged
 
         # Save input
-        Logger._log_folder_path = log_folder_path
-        Logger._project_root_path = project_root_path
+        self._log_folder_path = log_folder_path
+        self._project_root_path = project_root_path
 
         # Create log folder
-        folder_name = os.path.join(Logger._project_root_path, Logger._log_folder_path)
+        folder_name = os.path.join(self._project_root_path, self._log_folder_path)
         if not os.path.isfile(folder_name) and not os.path.isdir(folder_name):
             create_folder_if_not_exists(folder_name)
 
         # Save previous logs
-        with open(Logger._log_location(), "a", encoding="utf-8") as f:
+        with open(self._log_location(), "a", encoding="utf-8") as f:
             f.writelines(f"\n{datetime.datetime.now()} INIT Logger successful\n")
-            f.writelines("".join(Logger._log_buffer))
+            f.writelines("".join(self._log_buffer))
         
         # Empty log buffer
-        Logger._log_buffer = []
+        self._log_buffer = []
 
         # Update flags
-        Logger._isInit = True
-        print(f"Logger init process finished, Logger isInit is set to {Logger._isInit}")
+        self._isInit = True
+        print(f"Logger init process finished, Logger isInit is set to {self._isInit}")
 
-    @staticmethod
-    def info(msg: str) -> None:
-        Logger._log("INFO", msg)
+    @classmethod
+    def info(cls, msg: str) -> None:
+        cls._log("INFO", msg)
 
-    @staticmethod
-    def debug(msg: str) -> None:
-        Logger._log("DEBUG", msg)
+    @classmethod
+    def debug(cls, msg: str) -> None:
+        cls._log("DEBUG", msg)
 
-    @staticmethod
-    def warning(msg: str) -> None:
-        Logger._log("WARNING", msg)
+    @classmethod
+    def warning(cls, msg: str) -> None:
+        cls._log("WARNING", msg)
 
-    @staticmethod
-    def error(msg :str) -> None:
-        Logger._log("ERROR", msg)
+    @classmethod
+    def error(cls, msg :str) -> None:
+        cls._log("ERROR", msg)
 
-    @staticmethod
-    def _log(level: str, msg: str) -> None:
+    @classmethod
+    def _log(cls, level: str, msg: str) -> None:
         # Compose log
         composed_log_entry = f"{datetime.datetime.now()} {level.upper()}: {msg}\n"
-        if Logger._isInit:
+        if cls._isInit:
             # Write to file
             try:
-                with open(Logger._log_location(), "a", encoding="utf-8") as f:
+                with open(cls._log_location(), "a", encoding="utf-8") as f:
                     f.writelines(composed_log_entry)
             except FileNotFoundError:
-                Logger._create_log_file()
+                cls._create_log_file()
         else:
             # Write to buffer, not file
-            Logger._log_buffer.append(composed_log_entry)
+            cls._log_buffer.append(composed_log_entry)
             print(composed_log_entry)
         return
         
