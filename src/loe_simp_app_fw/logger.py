@@ -1,5 +1,6 @@
 import os
 import datetime
+import tempfile
 from io import TextIOWrapper
 from typing import Optional, IO
 from .helper import create_folder_if_not_exists, ProjectRootChanged
@@ -14,7 +15,7 @@ class Logger:
     # Internal variable
     _log_buffer = []
     _isInit = False
-    _log_file_handle: Optional[IO] = None
+    _log_file_handle: IO = tempfile.TemporaryFile()
     
     @classmethod
     def _log_location(cls):
@@ -53,6 +54,7 @@ class Logger:
             create_folder_if_not_exists(folder_name)
 
         # Create file IO handle
+        self._log_file_handle.close()
         self._log_file_handle = open(self._log_location(), "a", encoding="utf-8")
 
         # Save previous logs
@@ -86,13 +88,13 @@ class Logger:
     def _log(cls, level: str, msg: str) -> None:
         # Compose log
         composed_log_entry = f"{datetime.datetime.now()} {level.upper()}: {msg}\n"
-        if cls._isInit and isinstance(cls._log_file_handle, TextIOWrapper): 
+        if cls._isInit: 
             # The file handler is only to make static checker happy
             # Write to file
             try:
                 cls._log_file_handle.writelines(composed_log_entry)
             except FileNotFoundError:
-                cls._create_log_file()
+                cls._create_log_file()                
         else:
             # Write to buffer, not file
             cls._log_buffer.append(composed_log_entry)
