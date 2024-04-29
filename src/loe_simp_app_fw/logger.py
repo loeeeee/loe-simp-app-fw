@@ -1,5 +1,6 @@
 import os
 import datetime
+from io import TextIOWrapper
 from typing import Optional, IO
 from .helper import create_folder_if_not_exists, ProjectRootChanged
 
@@ -85,7 +86,7 @@ class Logger:
     def _log(cls, level: str, msg: str) -> None:
         # Compose log
         composed_log_entry = f"{datetime.datetime.now()} {level.upper()}: {msg}\n"
-        if cls._isInit and isinstance(cls._log_file_handle, IO): 
+        if cls._isInit and isinstance(cls._log_file_handle, TextIOWrapper): 
             # The file handler is only to make static checker happy
             # Write to file
             try:
