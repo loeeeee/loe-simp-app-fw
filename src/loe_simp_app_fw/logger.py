@@ -1,5 +1,6 @@
 import os
 import datetime
+from typing import Optional, IO
 from .helper import create_folder_if_not_exists, ProjectRootChanged
 
 # Do not write the Log until the explicit initialization of the logger
@@ -12,6 +13,7 @@ class Logger:
     # Internal variable
     _log_buffer = []
     _isInit = False
+    _log_file_handle: Optional[IO] = None
     
     @classmethod
     def _log_location(cls):
@@ -30,6 +32,7 @@ class Logger:
         Args:
             log_folder_path (str): path to log folder relative to project root path
             project_root_path (str, optional): path to project top-level directory. Defaults to os.getcwd().
+                                                The parent folder of that would be os.path.dirname(os.path.realpath(__file__)).
 
         Raises:
             ProjectRootChanged: Project root directory should not be changed once set
@@ -48,10 +51,12 @@ class Logger:
         if not os.path.isfile(folder_name) and not os.path.isdir(folder_name):
             create_folder_if_not_exists(folder_name)
 
+        # Create file IO handle
+        self._log_file_handle = open(self._log_location(), "a", encoding="utf-8")
+
         # Save previous logs
-        with open(self._log_location(), "a", encoding="utf-8") as f:
-            f.writelines(f"\n{datetime.datetime.now()} INIT Logger successful\n")
-            f.writelines("".join(self._log_buffer))
+        self._log_file_handle.writelines(f"\n{datetime.datetime.now()} INIT Logger successful\n")
+        self._log_file_handle.writelines("".join(self._log_buffer))
         
         # Empty log buffer
         self._log_buffer = []
@@ -80,11 +85,11 @@ class Logger:
     def _log(cls, level: str, msg: str) -> None:
         # Compose log
         composed_log_entry = f"{datetime.datetime.now()} {level.upper()}: {msg}\n"
-        if cls._isInit:
+        if cls._isInit and isinstance(cls._log_file_handle, IO): 
+            # The file handler is only to make static checker happy
             # Write to file
             try:
-                with open(cls._log_location(), "a", encoding="utf-8") as f:
-                    f.writelines(composed_log_entry)
+                cls._log_file_handle.writelines(composed_log_entry)
             except FileNotFoundError:
                 cls._create_log_file()
         else:
