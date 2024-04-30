@@ -15,7 +15,7 @@ class Logger:
     # Internal variable
     _log_buffer = []
     _isInit = False
-    _log_file_handle: IO = tempfile.TemporaryFile()
+    _log_file_handle: TextIOWrapper = tempfile.TemporaryFile("w")
     
     @classmethod
     def _log_location(cls):
@@ -28,7 +28,8 @@ class Logger:
             with open(cls._log_location(), "w", encoding="utf-8") as f:
                 print("Create log file successfully.")
 
-    def __init__(self, log_folder_path: str, project_root_path: str = os.getcwd()):
+    @classmethod
+    def setup(cls, log_folder_path: str, project_root_path: str = os.getcwd()):
         """Init Logger
 
         Args:
@@ -40,33 +41,33 @@ class Logger:
             ProjectRootChanged: Project root directory should not be changed once set
         """
         # Sanity check
-        if self._project_root_path and project_root_path and not os.path.samefile(project_root_path, self._project_root_path):
-            self.error("One should not change project root path twice")
+        if cls._project_root_path and project_root_path and not os.path.samefile(project_root_path, cls._project_root_path):
+            cls.error("One should not change project root path twice")
             raise ProjectRootChanged
 
         # Save input
-        self._log_folder_path = log_folder_path
-        self._project_root_path = project_root_path
+        cls._log_folder_path = log_folder_path
+        cls._project_root_path = project_root_path
 
         # Create log folder
-        folder_name = os.path.join(self._project_root_path, self._log_folder_path)
+        folder_name = os.path.join(cls._project_root_path, cls._log_folder_path)
         if not os.path.isfile(folder_name) and not os.path.isdir(folder_name):
             create_folder_if_not_exists(folder_name)
 
         # Create file IO handle
-        self._log_file_handle.close()
-        self._log_file_handle = open(self._log_location(), "a", encoding="utf-8")
+        cls._log_file_handle.close()
+        cls._log_file_handle = open(cls._log_location(), "a", encoding="utf-8")
 
         # Save previous logs
-        self._log_file_handle.writelines(f"\n{datetime.datetime.now()} INIT Logger successful\n")
-        self._log_file_handle.writelines("".join(self._log_buffer))
+        cls._log_file_handle.writelines(f"\n{datetime.datetime.now()} INIT Logger successful\n")
+        cls._log_file_handle.writelines("".join(cls._log_buffer))
         
         # Empty log buffer
-        self._log_buffer = []
+        cls._log_buffer = []
 
         # Update flags
-        self._isInit = True
-        print(f"Logger init process finished, Logger isInit is set to {self._isInit}")
+        cls._isInit = True
+        print(f"Logger init process finished, Logger isInit is set to {cls._isInit}")
 
     @classmethod
     def info(cls, msg: str) -> None:
@@ -88,13 +89,10 @@ class Logger:
     def _log(cls, level: str, msg: str) -> None:
         # Compose log
         composed_log_entry = f"{datetime.datetime.now()} {level.upper()}: {msg}\n"
-        if cls._isInit: 
+        if cls._isInit:
             # The file handler is only to make static checker happy
             # Write to file
-            try:
-                cls._log_file_handle.writelines(composed_log_entry)
-            except FileNotFoundError:
-                cls._create_log_file()                
+            cls._log_file_handle.writelines(composed_log_entry)
         else:
             # Write to buffer, not file
             cls._log_buffer.append(composed_log_entry)
@@ -104,7 +102,7 @@ class Logger:
 
 def logger_showoff() -> None:
     # Demonstrate the logger
-    Logger("log")
+    Logger.setup("log")
     print(f"Today is {datetime.date.today()}")
     Logger.info("LOGGER IS DeMoInG.")
 
