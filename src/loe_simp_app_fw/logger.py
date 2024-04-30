@@ -1,10 +1,19 @@
 import os
 import datetime
+from typing import Literal, Dict, Tuple, List
 import tempfile
 from io import TextIOWrapper
 from .helper import create_folder_if_not_exists, ProjectRootChanged
 
 # Do not write the Log until the explicit initialization of the logger
+
+class _LogLevel:
+    numerical_map: Dict[Literal["DEBUG", "INFO", "WARNING", "ERROR"], Literal[0, 1, 2, 3]]= {
+        "DEBUG": 0,
+        "INFO": 1,
+        "WARNING": 2,
+        "ERROR": 3
+    }
 
 class Logger:
     # Following parameters should be set at the top-level environment of the project
@@ -12,9 +21,10 @@ class Logger:
     _log_folder_path = "" # The path of _example_config_path relative to _project_root_path
     
     # Internal variable
-    _log_buffer = []
-    _isInit = False
+    _log_buffer: List[Tuple[Literal["DEBUG", "INFO", "WARNING", "ERROR"], str]] = []
+    _isInit: bool = False
     _log_file_handle: TextIOWrapper = tempfile.TemporaryFile("w")
+    _log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
     
     @classmethod
     def _log_location(cls):
@@ -27,7 +37,7 @@ class Logger:
             with open(cls._log_location(), "w", encoding="utf-8") as f:
                 print("Create log file successfully.")
 
-    def __init__(self, log_folder_path: str, project_root_path: str = os.getcwd()):
+    def __init__(self, log_folder_path: str, project_root_path: str = os.getcwd(), log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"):
         """Init Logger
 
         Args:
@@ -46,6 +56,7 @@ class Logger:
         # Save input
         type(self)._log_folder_path = log_folder_path
         type(self)._project_root_path = project_root_path
+        type(self)._log_level = log_level
 
         # Create log folder
         folder_name = os.path.join(self._project_root_path, self._log_folder_path)
@@ -53,19 +64,23 @@ class Logger:
             create_folder_if_not_exists(folder_name)
 
         # Create file IO handle
-        type(self)._log_file_handle.close()
+        self._log_file_handle.close()
         type(self)._log_file_handle = open(self._log_location(), "a", encoding="utf-8")
 
         # Save previous logs
-        type(self)._log_file_handle.writelines(f"\n{datetime.datetime.now()} INIT Logger successful\n")
-        type(self)._log_file_handle.writelines("".join(self._log_buffer))
+        self._log_file_handle.writelines(f"\n{datetime.datetime.now()} INIT Logger successful\n")
+        for entry in self._log_buffer:
+            composed_log_entry = self._log_composer(*entry)
+            print(composed_log_entry)
+            self._log_file_handle.writelines(composed_log_entry)
         
         # Empty log buffer
         type(self)._log_buffer = []
 
         # Update flags
         type(self)._isInit = True
-        print(f"Logger init process finished, Logger isInit is set to {self._isInit}")
+        print(f"Logger init process finished, Logger isInit is set to {self._isInit}.")
+        print(f"Now respecting log level, {log_level}.")
 
     @classmethod
     def info(cls, msg: str) -> None:
@@ -84,18 +99,24 @@ class Logger:
         cls._log("ERROR", msg)
 
     @classmethod
-    def _log(cls, level: str, msg: str) -> None:
+    def _log(cls, level: Literal["DEBUG", "INFO", "WARNING", "ERROR"], msg: str) -> None:
         # Compose log
-        composed_log_entry = f"{datetime.datetime.now()} {level.upper()}: {msg}\n"
+        composed_log_entry = cls._log_composer(level, msg)
         if cls._isInit:
-            # The file handler is only to make static checker happy
-            # Write to file
-            cls._log_file_handle.writelines(composed_log_entry)
+            # Log level filter
+            if _LogLevel.numerical_map[level] >= _LogLevel.numerical_map[cls._log_level]:
+                # The file handler is only to make static checker happy
+                # Write to file
+                cls._log_file_handle.writelines(composed_log_entry)
         else:
             # Write to buffer, not file
-            cls._log_buffer.append(composed_log_entry)
+            cls._log_buffer.append((level, msg))
             print(composed_log_entry)
         return
+
+    @staticmethod
+    def _log_composer(level: Literal["DEBUG", "INFO", "WARNING", "ERROR"], msg: str) -> str:
+        return f"{datetime.datetime.now()} {level.upper()}: {msg}\n"
         
 
 def logger_showoff() -> None:

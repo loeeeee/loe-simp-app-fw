@@ -14,7 +14,7 @@ Config("config.yaml", example_config_path="config-example.yaml", project_root_pa
 
 Logger.debug("Should be in both terminal and log file (later).")
 
-Logger("log", project_root_path=os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+Logger("log", project_root_path=os.path.dirname(os.path.dirname(os.path.realpath(__file__))), log_level="WARNING")
 
 something = Config.config["project root path"]
 
@@ -37,3 +37,16 @@ Logger.debug("andsfijasndif")
 Logger.debug("andsfijasndif")
 Logger.debug("andsfijasndif")
 Logger.debug("andsfijasndif")
+
+Logger.info("Something a little bit important")
+Logger.warning("Something quite important")
+Logger.error("YELLING AT YOU")
+
+
+Logger.info("Something a little bit important")
+Logger.warning("Something quite important")
+Logger.error("YELLING AT YOU")
+
+Logger.info("Something a little bit important")
+Logger.warning("Something quite important")
+Logger.error("YELLING AT YOU")
