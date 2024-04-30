@@ -2,7 +2,6 @@ import os
 import datetime
 import tempfile
 from io import TextIOWrapper
-from typing import Optional, IO
 from .helper import create_folder_if_not_exists, ProjectRootChanged
 
 # Do not write the Log until the explicit initialization of the logger
@@ -28,8 +27,7 @@ class Logger:
             with open(cls._log_location(), "w", encoding="utf-8") as f:
                 print("Create log file successfully.")
 
-    @classmethod
-    def setup(cls, log_folder_path: str, project_root_path: str = os.getcwd()):
+    def __init__(self, log_folder_path: str, project_root_path: str = os.getcwd()):
         """Init Logger
 
         Args:
@@ -41,33 +39,33 @@ class Logger:
             ProjectRootChanged: Project root directory should not be changed once set
         """
         # Sanity check
-        if cls._project_root_path and project_root_path and not os.path.samefile(project_root_path, cls._project_root_path):
-            cls.error("One should not change project root path twice")
+        if self._project_root_path and project_root_path and not os.path.samefile(project_root_path, self._project_root_path):
+            self.error("One should not change project root path twice")
             raise ProjectRootChanged
 
         # Save input
-        cls._log_folder_path = log_folder_path
-        cls._project_root_path = project_root_path
+        type(self)._log_folder_path = log_folder_path
+        type(self)._project_root_path = project_root_path
 
         # Create log folder
-        folder_name = os.path.join(cls._project_root_path, cls._log_folder_path)
+        folder_name = os.path.join(self._project_root_path, self._log_folder_path)
         if not os.path.isfile(folder_name) and not os.path.isdir(folder_name):
             create_folder_if_not_exists(folder_name)
 
         # Create file IO handle
-        cls._log_file_handle.close()
-        cls._log_file_handle = open(cls._log_location(), "a", encoding="utf-8")
+        type(self)._log_file_handle.close()
+        type(self)._log_file_handle = open(self._log_location(), "a", encoding="utf-8")
 
         # Save previous logs
-        cls._log_file_handle.writelines(f"\n{datetime.datetime.now()} INIT Logger successful\n")
-        cls._log_file_handle.writelines("".join(cls._log_buffer))
+        type(self)._log_file_handle.writelines(f"\n{datetime.datetime.now()} INIT Logger successful\n")
+        type(self)._log_file_handle.writelines("".join(self._log_buffer))
         
         # Empty log buffer
-        cls._log_buffer = []
+        type(self)._log_buffer = []
 
         # Update flags
-        cls._isInit = True
-        print(f"Logger init process finished, Logger isInit is set to {cls._isInit}")
+        type(self)._isInit = True
+        print(f"Logger init process finished, Logger isInit is set to {self._isInit}")
 
     @classmethod
     def info(cls, msg: str) -> None:
@@ -102,7 +100,7 @@ class Logger:
 
 def logger_showoff() -> None:
     # Demonstrate the logger
-    Logger.setup("log")
+    Logger("log")
     print(f"Today is {datetime.date.today()}")
     Logger.info("LOGGER IS DeMoInG.")
 

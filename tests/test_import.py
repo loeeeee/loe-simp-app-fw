@@ -14,7 +14,7 @@ Config("config.yaml", example_config_path="config-example.yaml", project_root_pa
 
 Logger.debug("Should be in both terminal and log file (later).")
 
-Logger.setup("log", project_root_path=os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+Logger("log", project_root_path=os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
 something = Config.config["project root path"]
 
