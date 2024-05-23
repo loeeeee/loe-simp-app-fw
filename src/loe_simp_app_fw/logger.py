@@ -4,6 +4,7 @@ from typing import Literal, Dict, Tuple, List
 import tempfile
 from io import TextIOWrapper
 from .helper import create_folder_if_not_exists, ProjectRootChanged
+import atexit
 
 # Do not write the Log until the explicit initialization of the logger
 
@@ -118,6 +119,12 @@ class Logger:
     def _log_composer(level: Literal["DEBUG", "INFO", "WARNING", "ERROR"], msg: str) -> str:
         return f"{datetime.datetime.now()} {level.upper()}: {msg}\n"
         
+
+@atexit.register
+def clean_log_buffer():
+    Logger.error("Uncatched error! Panic! Exit!")
+    # Clean up logger buffer when crashing
+    Logger._log_file_handle.close()
 
 def logger_showoff() -> None:
     # Demonstrate the logger
