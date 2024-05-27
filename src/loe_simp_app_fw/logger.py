@@ -1,20 +1,13 @@
 import os
 import datetime
-from typing import Literal, Dict, Tuple, List
+from typing import Literal, Dict, Tuple, List, TypeAlias
 import tempfile
 from io import TextIOWrapper
 from .helper import create_folder_if_not_exists, ProjectRootChanged
 import atexit
 
 # Do not write the Log until the explicit initialization of the logger
-
-class _LogLevel:
-    numerical_map: Dict[Literal["DEBUG", "INFO", "WARNING", "ERROR"], Literal[0, 1, 2, 3]]= {
-        "DEBUG": 0,
-        "INFO": 1,
-        "WARNING": 2,
-        "ERROR": 3
-    }
+LogLevels: TypeAlias = Literal["DEBUG", "INFO", "WARNING", "ERROR"]    
 
 class Logger:
     # Following parameters should be set at the top-level environment of the project
@@ -22,11 +15,19 @@ class Logger:
     _log_folder_path = "" # The path of _example_config_path relative to _project_root_path
     
     # Internal variable
-    _log_buffer: List[Tuple[Literal["DEBUG", "INFO", "WARNING", "ERROR"], str]] = []
+    _log_buffer: List[Tuple[LogLevels, str]] = []
     _isInit: bool = False
     _log_file_handle: TextIOWrapper = tempfile.TemporaryFile("w")
-    _log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
+    _log_level: LogLevels = "INFO"
     
+    # Constant
+    numerical_map: Dict[LogLevels, Literal[0, 1, 2, 3]]= {
+        "DEBUG": 0,
+        "INFO": 1,
+        "WARNING": 2,
+        "ERROR": 3
+    }
+
     @classmethod
     def _log_location(cls):
         file_name = f"{datetime.date.today()}.log"
@@ -38,7 +39,7 @@ class Logger:
             with open(cls._log_location(), "w", encoding="utf-8") as f:
                 print("Create log file successfully.")
 
-    def __init__(self, log_folder_path: str, project_root_path: str = os.getcwd(), log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"):
+    def __init__(self, log_folder_path: str, project_root_path: str = os.getcwd(), log_level: LogLevels = "INFO"):
         """Init Logger
 
         Args:
@@ -100,12 +101,17 @@ class Logger:
         cls._log("ERROR", msg)
 
     @classmethod
-    def _log(cls, level: Literal["DEBUG", "INFO", "WARNING", "ERROR"], msg: str) -> None:
+    def set_log_level(cls, level: LogLevels) -> None:
+        cls._log_level = level
+        Logger.warning(f"Log level is manually set to {level}")
+
+    @classmethod
+    def _log(cls, level: LogLevels, msg: str) -> None:
         # Compose log
         composed_log_entry = cls._log_composer(level, msg)
         if cls._isInit:
             # Log level filter
-            if _LogLevel.numerical_map[level] >= _LogLevel.numerical_map[cls._log_level]:
+            if cls.numerical_map[level] >= cls.numerical_map[cls._log_level]:
                 # The file handler is only to make static checker happy
                 # Write to file
                 cls._log_file_handle.writelines(composed_log_entry)
@@ -116,7 +122,7 @@ class Logger:
         return
 
     @staticmethod
-    def _log_composer(level: Literal["DEBUG", "INFO", "WARNING", "ERROR"], msg: str) -> str:
+    def _log_composer(level: LogLevels, msg: str) -> str:
         return f"{datetime.datetime.now()} {level.upper()}: {msg}\n"
         
 
