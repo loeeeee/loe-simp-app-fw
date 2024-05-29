@@ -173,6 +173,7 @@ class Config:
         return config
 
 # -------------------------------
+Logger.debug(f"isCLI is set to {isCLI}")
 
 # Init Config if CLI arguments are parsed successfully
 if __name__ != "__main__" and isCLI:
