@@ -67,7 +67,7 @@ class Logger:
 
         # Create file IO handle
         self._log_file_handle.close()
-        type(self)._log_file_handle = open(self._log_location(), "a", encoding="utf-8")
+        type(self)._log_file_handle = open(self._log_location(), "a", encoding="utf-8", buffering=0)
 
         # Save previous logs
         self._log_file_handle.writelines(f"\n{datetime.datetime.now()} INIT Logger successful\n")
