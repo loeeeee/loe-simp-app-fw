@@ -128,7 +128,6 @@ class Logger:
 
 @atexit.register
 def clean_log_buffer():
-    Logger.error("Uncatched error! Panic! Exit!")
     # Clean up logger buffer when crashing
     Logger._log_file_handle.close()
 

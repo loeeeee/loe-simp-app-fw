@@ -61,7 +61,7 @@ if not isNotebook():
     arguments = ArgumentParser()
 
     parser = ArgumentParser()
-    parser.add_argument("--config", type=str, default="", help="config file overwrites commandline arguments. if not present, a new one will be created")
+    parser.add_argument("--config", type=str, default="", help="config file overwrites command line arguments. if not present, a new one will be created")
     
     try:
         args = parser.parse_args()
@@ -81,7 +81,7 @@ elif not config_dir.startswith("/") and config_dir:
     Logger.info(f"Loading config from {config_dir}")
     isCLI = True
 else:
-    Logger.debug("No config information can be inffered from the CLI")
+    Logger.debug("No config information can be inferred from the CLI")
 # print(f"isCLI is {isCLI}")
     
 # -------------------------------
@@ -103,11 +103,11 @@ class Config:
             example_config_path (str, optional): path to config example. Defaults to "".
             respect_CLI (CLI, optional): whether CLI will overwrite the config choice of config_path. Defaults to False.
         """
-        # Senity check
+        # Sanity check
         ## No on-the-fly update of project root path
         if Config._project_root_path and project_root_path and not os.path.samefile(project_root_path, Config._project_root_path):
             Logger.error("One should not change project root path twice.")
-            Logger.error(f"Orignial project root path: {Config._project_root_path}")
+            Logger.error(f"Original project root path: {Config._project_root_path}")
             Logger.error(f"Updated project root path: {project_root_path}")
             raise ProjectRootChanged
 
@@ -176,4 +176,5 @@ class Config:
 
 # Init Config if CLI arguments are parsed successfully
 if __name__ != "__main__" and isCLI:
+    Logger.info(f"Receive CLI arguments")
     Config(config_dir)
