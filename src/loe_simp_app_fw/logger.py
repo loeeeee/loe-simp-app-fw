@@ -39,7 +39,7 @@ class Logger:
             with open(cls._log_location(), "w", encoding="utf-8") as f:
                 print("Create log file successfully.")
 
-    def __init__(self, log_folder_path: str, project_root_path: str = os.getcwd(), log_level: LogLevels = "INFO"):
+    def __init__(self, log_folder_path: str, project_root_path: str = os.getcwd(), log_level: LogLevels = "INFO", buffering: int = 1024):
         """Init Logger
 
         Args:
@@ -67,7 +67,7 @@ class Logger:
 
         # Create file IO handle
         self._log_file_handle.close()
-        type(self)._log_file_handle = open(self._log_location(), "a", encoding="utf-8", buffering=0)
+        type(self)._log_file_handle = open(self._log_location(), "a", encoding="utf-8", buffering=buffering)
 
         # Save previous logs
         self._log_file_handle.writelines(f"\n{datetime.datetime.now()} INIT Logger successful\n")
