@@ -69,6 +69,9 @@ if not isNotebook():
         parser.print_help()
         sys.exit(0)
     config_dir = args.config
+else:
+    Logger.info("Jupyter Notebook environment detected")
+
 
 # Result of the Parse CLI or not
 if config_dir.startswith("/"):
@@ -82,7 +85,6 @@ elif not config_dir.startswith("/") and config_dir:
     isCLI = True
 else:
     Logger.debug("No config information can be inferred from the CLI")
-# print(f"isCLI is {isCLI}")
     
 # -------------------------------
 
@@ -94,7 +96,13 @@ class Config:
     # Following variable will be loaded dynamically
     config = {}
 
-    def __init__(self, config_path: str, project_root_path: str=current_working_dir, example_config_path: str="config-example.yaml", respect_CLI: bool=False):
+    def __init__(
+        self, 
+        config_path: str, 
+        project_root_path: str = current_working_dir, 
+        example_config_path: str = "config-example.yaml", 
+        respect_CLI: bool = False
+        ) -> None:
         """Load config file from given path
 
         Args:
@@ -110,6 +118,12 @@ class Config:
             Logger.error(f"Original project root path: {Config._project_root_path}")
             Logger.error(f"Updated project root path: {project_root_path}")
             raise ProjectRootChanged
+
+        # Convert relative path to absolute path
+        config_path = os.path.join(project_root_path, config_path)
+        Logger.debug(f"Absolute config path is {config_path}")
+        example_config_path = os.path.join(project_root_path, example_config_path)
+        Logger.debug(f"Absolute config path is {config_path}")
 
         ## Check example config file
         if not example_config_path or not os.path.isfile(example_config_path):
