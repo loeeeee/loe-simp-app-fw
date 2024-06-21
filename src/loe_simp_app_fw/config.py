@@ -121,7 +121,7 @@ class Config:
         config_path = os.path.join(project_root_path, config_path)
         Logger.debug(f"Absolute config path is {config_path}")
         example_config_path = os.path.join(project_root_path, example_config_path)
-        Logger.debug(f"Absolute config path is {config_path}")
+        Logger.debug(f"Absolute example config path is {example_config_path}")
 
         ## Check example config file
         if not example_config_path or not os.path.isfile(example_config_path):
