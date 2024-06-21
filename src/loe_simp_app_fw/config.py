@@ -58,8 +58,6 @@ if __name__ == "__main__":
 config_dir = ""
 if not isNotebook():
     # Add CLI
-    arguments = ArgumentParser()
-
     parser = ArgumentParser()
     parser.add_argument("--config", type=str, default="", help="config file overwrites command line arguments. if not present, a new one will be created")
     
