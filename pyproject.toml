@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "loe_simp_app_fw"
-version = "2.0.0"
+version = "2.0.1"
 authors = [
   { name="loeeeee", email="95266635+loeeeee@users.noreply.github.com" },
 ]
