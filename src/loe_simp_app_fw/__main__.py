@@ -7,7 +7,7 @@ from argparse import ArgumentParser
 # Setup flags
 isCLI = False
 
-Logger.set_log_level("INFO")
+Logger.set_log_level("ERROR")
 
 # Parse CLI or not
 def isNotebook() -> bool:
@@ -44,7 +44,7 @@ if not isNotebook():
     args = parser.parse_args()
 
     # Handle subcommands based on 'subcommand' attribute
-    if args.subcommand == "init-repo":
+    if args.subcommand == "init-project":
         init_repo(os.path.abspath(args.path))
 
     # elif args.subcommand == "search":
