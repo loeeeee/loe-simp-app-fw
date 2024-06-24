@@ -32,7 +32,11 @@ if __name__ == "__main__":
 class BaseConfig:
     @classmethod
     def _all_variables(cls) -> Dict[str, Any]:
-        return {k: v for k, v in vars(cls).items()}
+        all_variables = {k: v for k, v in vars(cls).items()}
+        del all_variables["__module__"]
+        del all_variables["__annotations__"]
+        del all_variables["__doc__"]
+        return all_variables
 
     @classmethod
     def dump_example(cls, file_path: str) -> None:
