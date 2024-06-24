@@ -37,7 +37,7 @@ class BaseConfig:
     def dump_example(cls, file_path: str) -> None:
         if not os.path.isfile(file_path):
             with open(file_path, "w", encoding="utf-8") as f:
-                f.write(yaml.safe_dump(vars(cls)))
+                f.write(yaml.safe_dump(vars(cls())))
             Logger.info("Successfully write the file")
         else:
             Logger.warning(f"File already exists at {file_path}, skipping file creation")
@@ -75,7 +75,7 @@ class BaseConfig:
         if existing_keys_in_code and update:
             Logger.info(f"Find config update in code, {existing_keys_in_code}")
             with open(file_path, "w", encoding="utf-8") as f:
-                f.write(yaml.safe_dump(vars(cls)))
+                f.write(yaml.safe_dump(vars(cls())))
             Logger.info("Successfully update the file")
         else:
             Logger.info("No update found in code")
