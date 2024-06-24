@@ -65,16 +65,17 @@ class BaseConfig:
 
         # Find updates
         existing_keys_in_code: List[str] = list(cls._all_variables().keys())
-        for key, value in content.items():
-            try:
-                ind = existing_keys_in_code.index(key)
-            except ValueError:
-                Logger.warning(f"{key} are deleted in the code, removing it from config")
-            else:
-                # Note what code has and config does not
-                existing_keys_in_code.pop(ind)
-                # Load the config by the way
-                setattr(cls, key, value)
+        if content:
+            for key, value in content.items():
+                try:
+                    ind = existing_keys_in_code.index(key)
+                except ValueError:
+                    Logger.warning(f"{key} are deleted in the code, removing it from config")
+                else:
+                    # Note what code has and config does not
+                    existing_keys_in_code.pop(ind)
+                    # Load the config by the way
+                    setattr(cls, key, value)
         
         # Write example back
         if existing_keys_in_code and update:

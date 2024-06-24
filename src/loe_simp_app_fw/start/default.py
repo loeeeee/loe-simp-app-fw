@@ -1,25 +1,30 @@
 class ProjectConfig:
     configuration: str = \
 """
-from typing import ClassVar
+import os
+
+from typing import ClassVar, Literal
 from loe_simp_app_fw import BaseConfig, FrameworkConfig, Logger
 
-class ProjectConfig(BaseConfig):
-    @classmethod
-    def start_developer_mode(cls) -> None:
-        '''
-        Developer mode force the usage of the default configuration of ProjectConfig,
-            i.e., the one above, rather than the one in config-project.yaml
-        '''
-        Logger.warning(f"Project config is now in developer mode, settings from config-project.yaml will be ignored")
-        return
+#---------------------------------------------------------------
 
+# Modify the framework config location if necessary
+FrameworkConfig.load(os.path.abspath("./config-framework.yaml"))
+
+
+class ProjectConfig(BaseConfig):
     # Add tunable here
     example_tunable: ClassVar[str] = "ExAmPlE"
 
+#---------------------------------------------------------------
+
 if FrameworkConfig.developer_mode:
     # Skip loading the config
-    ProjectConfig.start_developer_mode()
+    '''
+    Developer mode force the usage of the default configuration of ProjectConfig,
+        i.e., the one above, rather than the one in config-project.yaml
+    '''
+    Logger.warning(f"Project config is now in developer mode, settings from config-project.yaml will be ignored")
 else:
     # Load the config 
     ProjectConfig.load(FrameworkConfig.project_config_path)
