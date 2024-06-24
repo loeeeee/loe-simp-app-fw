@@ -1,10 +1,7 @@
-from typing import ClassVar, List
+from typing import ClassVar, List, Dict, Any
 import yaml
-import json
 import os
-import sys
 from .logger import Logger, LogLevels
-from .helper import ProjectRootChanged
 
 """
 Workflow of the Config:
@@ -34,10 +31,14 @@ if __name__ == "__main__":
 
 class BaseConfig:
     @classmethod
+    def _all_variables(cls) -> Dict[str, Any]:
+        return {k: v for k, v in vars(cls).items()}
+
+    @classmethod
     def dump_example(cls, file_path: str) -> None:
         if not os.path.isfile(file_path):
             with open(file_path, "w", encoding="utf-8") as f:
-                f.write(yaml.safe_dump(vars(cls())))
+                f.write(yaml.safe_dump(cls._all_variables()))
             Logger.info("Successfully write the file")
         else:
             Logger.warning(f"File already exists at {file_path}, skipping file creation")
@@ -59,7 +60,7 @@ class BaseConfig:
         Logger.info("Successfully load the file")
 
         # Find updates
-        existing_keys_in_code: List[str] = list(vars(cls).keys())
+        existing_keys_in_code: List[str] = list(cls._all_variables().keys())
         for key, value in content.items():
             try:
                 ind = existing_keys_in_code.index(key)
@@ -75,7 +76,7 @@ class BaseConfig:
         if existing_keys_in_code and update:
             Logger.info(f"Find config update in code, {existing_keys_in_code}")
             with open(file_path, "w", encoding="utf-8") as f:
-                f.write(yaml.safe_dump(vars(cls())))
+                f.write(yaml.safe_dump(cls._all_variables()))
             Logger.info("Successfully update the file")
         else:
             Logger.info("No update found in code")
