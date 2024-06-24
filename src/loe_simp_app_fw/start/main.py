@@ -1,9 +1,9 @@
 from ..logger import Logger
 from ..helper import create_folder_if_not_exists
-from .default import ConfigExample, GitIgnore, Config
+from ..config import FrameworkConfig
+from .default import GitIgnore, ProjectConfig
 
 import os
-import yaml
 
 def mkdir(root_path: str, folder_name: str) -> None:
     Logger.debug(f"Create {folder_name} folder")
@@ -28,13 +28,27 @@ def main(project_root_path: str) -> None:
     mkdir(project_root_path, ".cache")
     Logger.info(f"Finish creating folders")
 
-    # Create example config
-    file_path = os.path.join(project_root_path, "config-example.yaml")
-    example_config: Config = ConfigExample.this
-    example_config["cache directory"] = os.path.join(project_root_path, ".cache")
-    example_config["project directory"] = project_root_path
-    write_file_if_not_exists(file_path, yaml.safe_dump(example_config, None, indent=2))
-    Logger.info(f"Finish creating config example")
+    # Create config
+    file_path = os.path.join(project_root_path, "config-framework.yaml")
+    FrameworkConfig.developer_mode = False
+    FrameworkConfig.project_directory = project_root_path
+    FrameworkConfig.source_directory = os.path.join(project_root_path, "src")
+    FrameworkConfig.cache_directory = os.path.join(project_root_path, ".cache")
+    FrameworkConfig.project_config_path = os.path.join(project_root_path, "config-project.yaml")
+    FrameworkConfig.dump_example(file_path)
+    Logger.info(f"Finish creating config file")
+
+    # Create editable config
+    file_path = os.path.join(project_root_path, "src", "configuration.py")
+    template: str = ProjectConfig.configuration
+    write_file_if_not_exists(file_path, template)
+    Logger.info(f"Finish creating editable config file")
+
+    # Create example main
+    file_path = os.path.join(project_root_path, "src", "main.py")
+    template: str = ProjectConfig.main
+    write_file_if_not_exists(file_path, template)
+    Logger.info(f"Finish creating example main file")
 
     # Create gitignore
     file_path = os.path.join(project_root_path, ".gitignore")

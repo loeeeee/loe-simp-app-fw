@@ -1,18 +1,30 @@
-from typing import TypedDict
+class ProjectConfig:
+    configuration: str = """
+    from loe_simp_app_fw import BaseConfig, FrameworkConfig
 
-Config = TypedDict("Config", {
-    "developer mode": bool,
-    "project directory": str,
-    "cache directory": str,
-})
+    class ProjectConfig(BaseConfig):
+        # Add tunable here
+        example_tunable: ClassVar[str] = "ExAmPlE"
+    
+    # Load the config 
+    ProjectConfig.load(FrameworkConfig)
 
+    # Combine two config
+    class Config(ProjectConfig, FrameworkConfig):
+        @classmethod
+        def start_developer_mode(cls) -> None:
+            
+        pass
+    if Config.developer_mode:
+        Config.start_developer_mode()
+        Logger.warning("Start developer mode, all settings are read from the configuration ")
+    """
 
-class ConfigExample:
-    this: Config = {
-        "cache directory": "",
-        "project directory": "",
-        "developer mode": False,
-    }
+    main: str = """
+    from loe_simp_app_fw import Logger
+    from configuration import Config
+
+    """
 
 
 class GitIgnore:
