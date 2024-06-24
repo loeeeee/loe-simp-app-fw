@@ -84,9 +84,14 @@ class BaseConfig:
 
 class FrameworkConfig(BaseConfig):
     developer_mode: ClassVar[bool]      = False
+    # Anchors
     project_directory: ClassVar[str]    = ""
-    cache_directory: ClassVar[str]      = ""
-    source_directory: ClassVar[str]     = ""
-    log_level: ClassVar[LogLevels]      = "INFO"
     project_config_path: ClassVar[str]  = ""
+    source_directory: ClassVar[str]     = ""
+    # Cache system
+    cache_directory: ClassVar[str]      = ""
+    cache_time_to_live: ClassVar[int]   = 7
+    # Log system
+    log_level: ClassVar[LogLevels]      = "INFO"
+    log_buffer_size: ClassVar[int]      = 2048
 

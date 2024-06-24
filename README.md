@@ -2,82 +2,117 @@
 
 A super simple python app framework that includes a logger and a config manager. This framework is also useable in Jupyter Notebook.
 
+In addition to those function, it has a CSV IO object, a Caching object to help with common data tasks.
+
 ## Example
 
-a typical project that uses this framework
+To get started, 
+
+```bash
+python3 -m loe_simp_app_fw init-repo
+```
+
+It will generate a project structure,
 
 ```
-project
-├── config-example.yaml
-├── config.yaml
+project directory
+├── .gitignore
+├── .cache
+│   └── (Hashed file name)
+├── config-framework.yaml
+├── config-project.yaml
 ├── LICENSE
 ├── log
 │   └── 2024-04-16.log
 ├── README.md
-├── src
-│   └── main.py
-└── tests
-    └── test_import.py
+└── src
+    ├── configuration.py
+    └── main.py
+
 ```
 
-### Loading
+## What happens after init
+
+In `configuration.py`, after the initialization, it would be,
 
 ```python
-import os
+from loe_simp_app_fw import BaseConfig, FrameworkConfig, Logger
 
-from loe_simp_app_fw import Config
+class ProjectConfig(BaseConfig):
+    @classmethod
+    def start_developer_mode(cls) -> None:
+        """
+        Developer mode force the usage of the default configuration of ProjectConfig,
+            i.e., the one above, rather than the one in config-project.yaml
+        """
+        Logger.warning(f"Project config is now in developer mode, settings from config-project.yaml will be ignored")
+        return
+
+    # Add tunable here
+    example_tunable: ClassVar[str] = "ExAmPlE"
+
+if Config.developer_mode:
+    # Skip loading the config
+    ProjectConfig.start_developer_mode()
+else:
+    # Load the config 
+    ProjectConfig.load(FrameworkConfig)
+
+# Combine two config
+class Config(ProjectConfig, FrameworkConfig):
+    pass
+
+# Init logger
+Logger(Config.log_directory, project_root_path = Config.project_directory, log_level = Config.log_level, buffering = Config.log_buffer_size)
+
+Logger.info("Configuration finish initialization")
+```
+
+One may add additional tunables under ProjectConfig as a class variable.
+
+In `main.py`, after the initialization, it would be
+
+```python
+from loe_simp_app_fw import Logger
+from configuration import Config
+
+```
+
+## Basic Usage
+
+### Logger usage
+
+```python
 from loe_simp_app_fw import Logger
 
-Config("config.yaml", example_config_path="config-example.yaml", project_root_path=os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
-Logger("log", project_root_path=os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
-```
-
-It will read from 
-
-```bash
-[project root path]/"config.yaml"
-```
-
-The example config is located at
-
-```bash
-[project root path]/"config-example.yaml"
-```
-
-The log file will be at
-
-```bash
-[project root path]/"log"/yyyy-mm-dd.log
-```
-### Basic Usage
-
-Logger usage
-
-```python
 Logger.debug("This is a debug message.")
 Logger.info("This is a info message.")
 Logger.warning("This is a warning message.")
 Logger.error("This is a error message.")
 ```
 
-Config usage
+### Config usage
 
 ```python
-something = Config.config["project root path"]
+from configuration import Config
+
+something = Config.log_level
 ```
 
-### Advance Usage
+## .gitignore
 
-Config hot reload
+`.gitignore` file will be generated for the project.
 
-```python
-Config("another-config.yaml")
-```
-
-### .gitignore
+In addition to the python gitignore template from GitHub, the following are also added.
 
 ```.gitignore
-log/
+# Loe's Simple App Framework
+playground*
+database*
 config*.yaml
-!config-example.yaml
+raw
+middleware
+.cache*
+perf/
+temp
 ```

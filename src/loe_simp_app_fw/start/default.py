@@ -1,23 +1,35 @@
 class ProjectConfig:
     configuration: str = """
-    from loe_simp_app_fw import BaseConfig, FrameworkConfig
+    from loe_simp_app_fw import BaseConfig, FrameworkConfig, Logger
 
     class ProjectConfig(BaseConfig):
+        @classmethod
+        def start_developer_mode(cls) -> None:
+            '''
+            Developer mode force the usage of the default configuration of ProjectConfig,
+                i.e., the one above, rather than the one in config-project.yaml
+            '''
+            Logger.warning(f"Project config is now in developer mode, settings from config-project.yaml will be ignored")
+            return
+
         # Add tunable here
         example_tunable: ClassVar[str] = "ExAmPlE"
-    
-    # Load the config 
-    ProjectConfig.load(FrameworkConfig)
+
+    if Config.developer_mode:
+        # Skip loading the config
+        ProjectConfig.start_developer_mode()
+    else:
+        # Load the config 
+        ProjectConfig.load(FrameworkConfig)
 
     # Combine two config
     class Config(ProjectConfig, FrameworkConfig):
-        @classmethod
-        def start_developer_mode(cls) -> None:
-            
         pass
-    if Config.developer_mode:
-        Config.start_developer_mode()
-        Logger.warning("Start developer mode, all settings are read from the configuration ")
+
+    # Init logger
+    Logger(Config.log_directory, project_root_path = Config.project_directory, log_level = Config.log_level, buffering = Config.log_buffer_size)
+
+    Logger.info("Configuration finish initialization")
     """
 
     main: str = """
