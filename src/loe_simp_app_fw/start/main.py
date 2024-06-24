@@ -35,6 +35,7 @@ def main(project_root_path: str) -> None:
     FrameworkConfig.source_directory = os.path.join(project_root_path, "src")
     FrameworkConfig.cache_directory = os.path.join(project_root_path, ".cache")
     FrameworkConfig.project_config_path = os.path.join(project_root_path, "config-project.yaml")
+    FrameworkConfig.log_directory = os.path.join(project_root_path, "log")
     FrameworkConfig.dump_example(file_path)
     Logger.info(f"Finish creating config file")
 

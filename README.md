@@ -36,27 +36,28 @@ project directory
 In `configuration.py`, after the initialization, it would be,
 
 ```python
+from typing import ClassVar
 from loe_simp_app_fw import BaseConfig, FrameworkConfig, Logger
 
 class ProjectConfig(BaseConfig):
     @classmethod
     def start_developer_mode(cls) -> None:
-        """
+        '''
         Developer mode force the usage of the default configuration of ProjectConfig,
             i.e., the one above, rather than the one in config-project.yaml
-        """
+        '''
         Logger.warning(f"Project config is now in developer mode, settings from config-project.yaml will be ignored")
         return
 
     # Add tunable here
     example_tunable: ClassVar[str] = "ExAmPlE"
 
-if Config.developer_mode:
+if FrameworkConfig.developer_mode:
     # Skip loading the config
     ProjectConfig.start_developer_mode()
 else:
     # Load the config 
-    ProjectConfig.load(FrameworkConfig)
+    ProjectConfig.load(FrameworkConfig.project_config_path)
 
 # Combine two config
 class Config(ProjectConfig, FrameworkConfig):

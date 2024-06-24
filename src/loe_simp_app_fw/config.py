@@ -97,6 +97,7 @@ class FrameworkConfig(BaseConfig):
     cache_directory: ClassVar[str]      = ""
     cache_time_to_live: ClassVar[int]   = 7
     # Log system
+    log_directory: ClassVar[str]        = ""
     log_level: ClassVar[LogLevels]      = "INFO"
     log_buffer_size: ClassVar[int]      = 2048
 
