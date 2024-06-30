@@ -1,3 +1,4 @@
+from typing import no_type_check
 from .logger import Logger
 from .start import main as init_repo
 
@@ -10,9 +11,13 @@ isCLI = False
 Logger.set_log_level("ERROR")
 
 # Parse CLI or not
+@no_type_check ## Skip type checker here because 
+def _isNotebook():
+    return get_ipython().__class__.__name__ # het_python() is globally available when using jupyter notebook
+
 def isNotebook() -> bool:
     try:
-        shell = get_ipython().__class__.__name__ # het_python() is globally available when using jupyter notebook
+        shell = _isNotebook()
         if shell == 'ZMQInteractiveShell':
             return True   # Jupyter notebook or qtconsole
         elif shell == 'TerminalInteractiveShell':
