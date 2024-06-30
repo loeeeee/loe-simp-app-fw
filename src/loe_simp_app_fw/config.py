@@ -1,4 +1,4 @@
-from typing import ClassVar, List, Dict, Any
+from typing import Annotated, ClassVar, List, Dict, Any
 import yaml
 import os
 from .logger import Logger, LogLevels
@@ -89,16 +89,16 @@ class BaseConfig:
 
 
 class FrameworkConfig(BaseConfig):
-    developer_mode: ClassVar[bool]      = False
+    developer_mode: ClassVar[Annotated[bool, "Ignoring yaml config file"]]      = False
     # Anchors
-    project_directory: ClassVar[str]    = ""
-    project_config_path: ClassVar[str]  = ""
-    source_directory: ClassVar[str]     = ""
+    project_directory: ClassVar[Annotated[str, "Root folder of the project"]]   = ""
+    project_config_path: ClassVar[Annotated[str, "Path to config yaml file"]]   = ""
+    source_directory: ClassVar[Annotated[str, "Path to code directory"]]        = ""
     # Cache system
-    cache_directory: ClassVar[str]      = ""
-    cache_time_to_live: ClassVar[int]   = 7
+    cache_directory: ClassVar[Annotated[str, "Folder for storing cache"]]       = ""
+    cache_time_to_live: ClassVar[Annotated[int, "Auto expire cache"]]           = 7
     # Log system
-    log_directory: ClassVar[str]        = ""
-    log_level: ClassVar[LogLevels]      = "INFO"
-    log_buffer_size: ClassVar[int]      = 2048
+    log_directory: ClassVar[Annotated[str, "Folder for storing log files"]]     = ""
+    log_level: ClassVar[Annotated[LogLevels, "Log levels"]]                     = "INFO"
+    log_buffer_size: ClassVar[Annotated[int, "Size of buffer"]]                 = 2048
 
