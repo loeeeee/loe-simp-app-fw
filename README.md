@@ -105,6 +105,15 @@ from configuration import Config
 something = Config.log_level
 ```
 
+### Additional tools
+
+```python
+from loe_simp_app_fw import isNotebook
+
+# Return True when in a jupyter notebook environment
+
+```
+
 ## .gitignore
 
 `.gitignore` file will be generated for the project.
