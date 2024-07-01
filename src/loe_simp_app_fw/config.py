@@ -54,9 +54,8 @@ class BaseConfig:
         if not os.path.isfile(file_path):
             Logger.error(f"Cannot find file at {file_path}")
             cls.dump_example(file_path)
-            Logger.info(f"Cannot find existing config during update, created a new one")
+            Logger.info("Cannot find existing config during update, created a new one")
             Logger.info("Finish updating")
-            return
 
         # Find existing files
         with open(file_path, "r", encoding="utf-8") as f:

@@ -15,13 +15,12 @@ if not isNotebook():
     # Create the main parser
     parser = ArgumentParser(description="This app builds a repo template for loe's simple app framework.")
 
-    # Create subparsers for gather and search commands
     subparsers = parser.add_subparsers(title="subcommands", dest="subcommand",
                                         help="Choose what to do")
 
     # Init subparser
     init_parser = subparsers.add_parser("init-project", help="Create folder structure")
-    init_parser.add_argument("path", help="The path to the project root", default="./")
+    init_parser.add_argument("path", type=str, help="The path to the project root", default="./")
 
     # Parse arguments
     args = parser.parse_args()
