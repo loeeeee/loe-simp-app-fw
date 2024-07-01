@@ -20,7 +20,7 @@ def write_file_if_not_exists(file_path: str, content: str) -> None:
         Logger.warning(f"File already exists at {file_path}, skipping file creation")
     return
 
-def main(project_root_path: str) -> None:
+def main(project_root_path: str, no_code: bool = False) -> None:
     # Create folders
     Logger.info(f"Init project at {project_root_path}")
     mkdir(project_root_path, "src")
@@ -39,22 +39,23 @@ def main(project_root_path: str) -> None:
     FrameworkConfig.dump_example(file_path)
     Logger.info(f"Finish creating config file")
 
-    # Create editable config
-    file_path = os.path.join(project_root_path, "src", "configuration.py")
-    template: str = ProjectConfig.configuration
-    write_file_if_not_exists(file_path, template)
-    Logger.info(f"Finish creating editable config file")
+    if not no_code:
+        # Create editable config
+        file_path = os.path.join(project_root_path, "src", "configuration.py")
+        template: str = ProjectConfig.configuration
+        write_file_if_not_exists(file_path, template)
+        Logger.info(f"Finish creating editable config file")
 
-    # Create example main
-    file_path = os.path.join(project_root_path, "src", "main.py")
-    template: str = ProjectConfig.main
-    write_file_if_not_exists(file_path, template)
-    Logger.info(f"Finish creating example main file")
+        # Create example main
+        file_path = os.path.join(project_root_path, "src", "main.py")
+        template: str = ProjectConfig.main
+        write_file_if_not_exists(file_path, template)
+        Logger.info(f"Finish creating example main file")
 
-    # Create gitignore
-    file_path = os.path.join(project_root_path, ".gitignore")
-    git_ignore = GitIgnore.python + GitIgnore.this
-    write_file_if_not_exists(file_path, git_ignore)
-    Logger.info(f"Finish creating gitignore")
+        # Create gitignore
+        file_path = os.path.join(project_root_path, ".gitignore")
+        git_ignore = GitIgnore.python + GitIgnore.this
+        write_file_if_not_exists(file_path, git_ignore)
+        Logger.info(f"Finish creating gitignore")
     
     return

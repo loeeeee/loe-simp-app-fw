@@ -21,13 +21,14 @@ if not isNotebook():
     # Init subparser
     init_parser = subparsers.add_parser("init-project", help="Create folder structure")
     init_parser.add_argument("path", type=str, help="The path to the project root", default="./")
+    init_parser.add_argument("--no-code", help="Do not create files in src folder", dest="no_code")
 
     # Parse arguments
     args = parser.parse_args()
 
     # Handle subcommands based on 'subcommand' attribute
     if args.subcommand == "init-project":
-        init_repo(os.path.abspath(args.path))
+        init_repo(os.path.abspath(args.path), no_code=args.no_code)
 
     else:
         parser.print_help()
