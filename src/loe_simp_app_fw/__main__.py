@@ -23,11 +23,6 @@ if not isNotebook():
     init_parser = subparsers.add_parser("init-project", help="Create folder structure")
     init_parser.add_argument("path", help="The path to the project root", default="./")
 
-    # Search subparser
-    # search_parser = subparsers.add_parser("search", help="Search for data")
-    # search_parser.add_argument("query", help="Search query")
-    # search_parser.add_argument("-l", "--limit", type=int, help="Maximum number of results")
-
     # Parse arguments
     args = parser.parse_args()
 
@@ -35,11 +30,6 @@ if not isNotebook():
     if args.subcommand == "init-project":
         init_repo(os.path.abspath(args.path))
 
-    # elif args.subcommand == "search":
-    #     # Handle search arguments here (e.g., call a search function)
-    #     print(f"Searching for: {args.query}")
-    #     if args.limit:
-    #         print(f"Limiting results to {args.limit}")
     else:
         parser.print_help()
 else:
