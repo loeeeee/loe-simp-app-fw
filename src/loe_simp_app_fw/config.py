@@ -3,30 +3,8 @@ import yaml
 import os
 from .logger import Logger, LogLevels
 
-"""
-Workflow of the Config:
-
-# Load config
-
-- No config
-    - Duplicate one from the example
-- Have config
-    - Nothing
-
-Load config
-
-# Add additional things into config
-
-Workflow of the NewConfig
-
-# LoadConfig
-
-LoadConfig
-
-"""
-
-if __name__ == "__main__":
-    Logger.error("Running config.py as main! Why?")
+class NotInitialized(Exception):
+    pass
 
 
 class BaseConfig:
@@ -53,9 +31,7 @@ class BaseConfig:
         # No file found case
         if not os.path.isfile(file_path):
             Logger.error(f"Cannot find file at {file_path}")
-            cls.dump_example(file_path)
-            Logger.info("Cannot find existing config during update, created a new one")
-            Logger.info("Finish updating")
+            raise NotInitialized
 
         # Find existing files
         with open(file_path, "r", encoding="utf-8") as f:

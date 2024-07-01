@@ -38,7 +38,7 @@ In `configuration.py`, after the initialization, it would be,
 ```python
 import os
 
-from typing import ClassVar, Literal
+from typing import ClassVar
 from loe_simp_app_fw import BaseConfig, FrameworkConfig, Logger
 
 #---------------------------------------------------------------
