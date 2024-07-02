@@ -39,7 +39,7 @@ In `configuration.py`, after the initialization, it would be,
 import os
 
 from typing import ClassVar
-from loe_simp_app_fw import BaseConfig, FrameworkConfig, Logger
+from loe_simp_app_fw import BaseConfig, FrameworkConfig, Logger, NotInitialized
 
 #---------------------------------------------------------------
 
@@ -61,8 +61,13 @@ if FrameworkConfig.developer_mode:
     '''
     Logger.warning(f"Project config is now in developer mode, settings from config-project.yaml will be ignored")
 else:
-    # Load the config 
-    ProjectConfig.load(FrameworkConfig.project_config_path)
+    # Load the config
+    try:
+        ProjectConfig.load(FrameworkConfig.project_config_path)
+    except NotInitialized:
+        Logger.warning(f"Cannot find project config file at {FrameworkConfig.project_config_path}.")
+        ProjectConfig.dump_example(FrameworkConfig.project_config_path)
+        Logger.info(f"Successfully create example project config at {FrameworkConfig.project_config_path}")
 
 # Combine two config
 class Config(ProjectConfig, FrameworkConfig):
