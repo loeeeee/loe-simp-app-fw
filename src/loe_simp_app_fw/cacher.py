@@ -206,7 +206,7 @@ class GlobalCacheManager:
 
 @atexit.register
 def save_to_disk():
-    Logger.info("Cacher detects exit")
+    Logger.debug("Cacher detects exit")
     if GlobalCacheManager._isSetup:
         GlobalCacheManager._suspend()
     else:
