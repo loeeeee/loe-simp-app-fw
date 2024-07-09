@@ -28,7 +28,7 @@ class DebugQueue:
     def dump(self) -> None:
         file_path: str = os.path.join(self.log_location, "debug.log")
         with open(file_path, "w", encoding="utf-8") as f:
-            f.write("\n".join(self._queue[-self._last:]))
+            f.write("".join(self._queue[-self._last:]))
 
 class Logger:
     # Following parameters should be set at the top-level environment of the project
