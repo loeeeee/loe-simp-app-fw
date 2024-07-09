@@ -7,18 +7,39 @@ from .helper import create_folder_if_not_exists, ProjectRootChanged
 import atexit
 
 # Do not write the Log until the explicit initialization of the logger
-LogLevels: TypeAlias = Literal["DEBUG", "INFO", "WARNING", "ERROR"]    
+LogLevels: TypeAlias = Literal["DEBUG", "INFO", "WARNING", "ERROR"]
+
+class DebugQueue:
+    def __init__(self, number_of_message_to_keep: int = 5000) -> None:
+        self._queue: List[str] = []
+        self._last: int = number_of_message_to_keep
+        self.log_location: str = ""
+
+    def append(self, message: str) -> None:
+        self._queue.append(message)
+        # Trim excessive
+        if len(self._queue) >= 1.5 * self._last:
+            self._queue = self._queue[-self._last:]
+        return
+
+    def __len__(self) -> int:
+        return len(self._queue)
+
+    def dump(self) -> None:
+        file_path: str = os.path.join(self.log_location, "debug.log")
+        with open(file_path, "w", encoding="utf-8") as f:
+            f.write("\n".join(self._queue[-self._last:]))
 
 class Logger:
     # Following parameters should be set at the top-level environment of the project
-    _project_root_path = ""
-    _log_folder_path = "" # The path of _example_config_path relative to _project_root_path
+    _log_folder_path = "" # The abs _log_folder_path
     
     # Internal variable
     _log_buffer: List[Tuple[LogLevels, str]] = []
     _isInit: bool = False
     _log_file_handle: TextIOWrapper = tempfile.TemporaryFile("w")
     _log_level: LogLevels = "INFO"
+    _debug_queue: DebugQueue = DebugQueue()
     
     # Constant
     numerical_map: Dict[LogLevels, Literal[0, 1, 2, 3]]= {
@@ -31,12 +52,12 @@ class Logger:
     @classmethod
     def _log_location(cls):
         file_name = f"{datetime.date.today()}.log"
-        return os.path.join(cls._project_root_path, cls._log_folder_path, file_name)
+        return os.path.join(cls._log_folder_path, file_name)
 
     @classmethod
     def _create_log_file(cls):
         if not os.path.isfile(cls._log_location()) and not os.path.isdir(cls._log_location()):
-            with open(cls._log_location(), "w", encoding="utf-8") as f:
+            with open(cls._log_location(), "w", encoding="utf-8"):
                 print("Create log file successfully.")
 
     def __init__(self, log_folder_path: str, project_root_path: str = os.getcwd(), log_level: LogLevels = "INFO", buffering: int = 1024):
@@ -44,26 +65,25 @@ class Logger:
 
         Args:
             log_folder_path (str): path to log folder relative to project root path
-            project_root_path (str, optional): path to project top-level directory. Defaults to os.getcwd().
-                                                The parent folder of that would be os.path.dirname(os.path.realpath(__file__)).
+            project_root_path (str, optional): DEPRECATED! DOES NOTHING
 
         Raises:
             ProjectRootChanged: Project root directory should not be changed once set
         """
-        # Sanity check
-        if self._project_root_path and project_root_path and not os.path.samefile(project_root_path, self._project_root_path):
-            self.error("One should not change project root path twice")
-            raise ProjectRootChanged
-
         # Save input
-        type(self)._log_folder_path = log_folder_path
-        type(self)._project_root_path = project_root_path
+        type(self)._log_folder_path = os.path.abspath(log_folder_path)
         type(self)._log_level = log_level
 
+        self._debug_queue.log_location = self._log_folder_path
+
+        # Sanity check
+        if self._log_folder_path and log_folder_path and not os.path.samefile(log_folder_path, self._log_folder_path):
+            self.error("One should not change project root path")
+            raise ProjectRootChanged
+
         # Create log folder
-        folder_name = os.path.join(self._project_root_path, self._log_folder_path)
-        if not os.path.isfile(folder_name) and not os.path.isdir(folder_name):
-            create_folder_if_not_exists(folder_name)
+        if not os.path.isfile(self._log_folder_path) and not os.path.isdir(self._log_folder_path):
+            create_folder_if_not_exists(self._log_folder_path)
 
         # Create file IO handle
         self._log_file_handle.close()
@@ -115,6 +135,9 @@ class Logger:
                 # The file handler is only to make static checker happy
                 # Write to file
                 cls._log_file_handle.writelines(composed_log_entry)
+            
+            # Keep track of the latest entry
+            cls._debug_queue.append(composed_log_entry)
         else:
             # Write to buffer, not file
             cls._log_buffer.append((level, msg))
@@ -130,6 +153,7 @@ class Logger:
 def clean_log_buffer():
     # Clean up logger buffer when crashing
     Logger._log_file_handle.close()
+    Logger._debug_queue.dump()
 
 def logger_showoff() -> None:
     # Demonstrate the logger
