@@ -4,6 +4,7 @@ from .cacher import CacheCorrupt, CacheExpired, CacheMiss, CacheNotFound, Global
 from .csvnia import CSVReader, CSVWriter
 from .notebook import isNotebook
 from .start import main as init_repo
+from .request_handler import RequestError, RequestHandler
 
 __all__ = [
     "Logger", 
@@ -19,4 +20,6 @@ __all__ = [
     "BaseConfig",
     "isNotebook",
     "init_repo",
+    "RequestHandler",
+    "RequestError",
     ]

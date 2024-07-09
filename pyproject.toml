@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "loe_simp_app_fw"
-version = "2.3.3"
+version = "2.4.0"
 authors = [
   { name="loeeeee", email="95266635+loeeeee@users.noreply.github.com" },
 ]
@@ -18,6 +18,7 @@ classifiers = [
 ]
 dependencies = [
   "pyyaml",
+  "requests"
 ]
 
 [project.urls]
