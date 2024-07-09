@@ -14,7 +14,7 @@ class CSV:
     def __str__(self) -> str:
         columns = ", ".join(self.columns)
         size = len(self)
-        return f"Columns: {columns}\nSize: {size}"
+        return f"Columns: {columns} Size: {size}"
 
     def __len__(self):
         return len(self.records)
