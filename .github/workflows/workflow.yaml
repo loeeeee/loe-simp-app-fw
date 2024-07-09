@@ -1,4 +1,4 @@
-name: Publish loe-simp-app-fw to pypi
+name: Publish to PyPi
 
 on: push
 
