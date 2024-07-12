@@ -26,7 +26,16 @@ class RetryCounter:
         self._counter = 0
 
     def shouldContinue(self) -> bool:
-        return self._counter < self.threshold        
+        return self._counter < self.threshold
+
+    def isFirstTime(self) -> bool:
+        """
+        Help determine if cache should be used or ignored
+
+        Returns:
+            bool: _description_
+        """
+        return self._counter == 0
 
     class RetryLimitReached(Exception):
         pass
