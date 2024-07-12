@@ -23,7 +23,8 @@ def write_file_if_not_exists(file_path: str, content: str) -> None:
 def main(project_root_path: str, no_code: bool = False) -> None:
     # Create folders
     Logger.info(f"Init project at {project_root_path}")
-    mkdir(project_root_path, "src")
+    if not no_code:
+        mkdir(project_root_path, "src")
     mkdir(project_root_path, "log")
     mkdir(project_root_path, ".cache")
     Logger.info(f"Finish creating folders")
