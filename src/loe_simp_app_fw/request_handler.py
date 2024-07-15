@@ -47,6 +47,9 @@ class RequestError:
     class EmptyResponseContent(Exception):
         pass
 
+    class ConnectionError(Exception):
+        pass
+
     class Unknown(Exception):
         pass
 
@@ -102,7 +105,7 @@ class RequestHandler:
                         )
         except (requests.exceptions.ConnectionError, requests.exceptions.ReadTimeout) as e:
             Logger.error(f"Failed to connect to host server, because of {e}")
-            raise
+            raise RequestError.ConnectionError
         else:
             Logger.debug("Got a response.")
         finally:
@@ -155,7 +158,7 @@ class RequestHandler:
             # Try making the request
             try:
                 response = cls.get_unhandled(URL)
-            except (RequestError.EmptyResponseContent, RequestError.UnsuccessfulStatusCode, RequestError.Unknown):
+            except (RequestError.EmptyResponseContent, RequestError.UnsuccessfulStatusCode, RequestError.ConnectionError ,RequestError.Unknown):
                 Logger.warning(f"Request failed, retrying")
                 pass
             else:
