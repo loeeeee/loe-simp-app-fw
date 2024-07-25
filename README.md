@@ -74,7 +74,7 @@ class Config(ProjectConfig, FrameworkConfig):
     pass
 
 # Init logger
-Logger(Config.log_directory, project_root_path = Config.project_directory, log_level = Config.log_level, buffering = Config.log_buffer_size)
+Logger.bootstrap(Config.log_directory, log_level = Config.log_level, buffering = Config.log_buffer_size)
 
 Logger.info("Configuration finish initialization")
 ```
