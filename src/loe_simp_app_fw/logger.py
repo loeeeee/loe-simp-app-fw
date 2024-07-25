@@ -1,165 +1,212 @@
+from enum import Enum
+from io import TextIOWrapper
 import os
 import datetime
-from typing import Literal, Dict, Tuple, List, TypeAlias
-import tempfile
-from io import TextIOWrapper
-from .helper import create_folder_if_not_exists, ProjectRootChanged
+from typing import ClassVar, Literal, List, TypeAlias, Union
+from dataclasses import dataclass, field
 import atexit
+import multiprocessing
+import threading
+import time
 
 # Do not write the Log until the explicit initialization of the logger
 LogLevels: TypeAlias = Literal["DEBUG", "INFO", "WARNING", "ERROR"]
 
-class DebugQueue:
-    def __init__(self, number_of_message_to_keep: int = 5000) -> None:
-        self._queue: List[str] = []
-        self._last: int = number_of_message_to_keep
-        self.log_location: str = ""
 
-    def append(self, message: str) -> None:
-        self._queue.append(message)
-        # Trim excessive
-        if len(self._queue) >= 1.5 * self._last:
-            self._queue = self._queue[-self._last:]
-        return
+class LogLevelsE(Enum):
+    DEBUG = 0
+    INFO = 1
+    WARNING = 2
+    ERROR = 3
 
-    def __len__(self) -> int:
-        return len(self._queue)
 
-    def dump(self) -> None:
-        file_path: str = os.path.join(self.log_location, "debug.log")
-        with open(file_path, "w", encoding="utf-8") as f:
-            f.write("".join(self._queue[-self._last:]))
+@dataclass
+class LogEntry:
+    level: LogLevels
+    message: str
+
+    # Internal
+    consumed: bool = field(default=False, kw_only=True)
+
+    def __str__(self) -> str:
+        return f"{datetime.datetime.now()} {self.level.upper()}: {self.message}"
+
+
+class _Logger(multiprocessing.Process):
+    def __init__(
+        self, 
+        log_queue: multiprocessing.JoinableQueue[LogEntry], 
+        log_directory: Union[str, os.PathLike], 
+        log_buffering: int,
+        log_level: LogLevels, 
+        isFinish: threading.Event,
+        *args, 
+        ) -> None:
+        super().__init__(daemon=True, name="Logger Backend")
+        self._level: int = getattr(LogLevelsE, log_level).value
+        self._buffer: int = log_buffering
+        self._log_directory = log_directory
+        self._date: datetime.date = datetime.date.today()
+        self._isFinish = isFinish
+        self._history_length: int = 3000
+        self._last_write_time: float = time.time()
+        self._write_interval: float = 5.0
+
+        self.queue: multiprocessing.JoinableQueue[LogEntry] = log_queue
+        self.file_handler = self.create_file_handler()
+        self.debug_file_handler = open(
+            os.path.join(log_directory, "debug.log"),
+            "w",
+            encoding = "utf-8",
+            buffering = log_buffering,
+        )
+        self.log_history: List[LogEntry] = []
+
+    def run(self) -> None:
+        # Main loop
+        while not self._isFinish.is_set():
+            try:
+                log = self.queue.get(timeout=self._write_interval)
+            except multiprocessing.TimeoutError:
+                self.log_history.append(
+                    LogEntry(
+                        LogLevelsE.DEBUG.name,
+                        "A timeout happened because no logs are received"
+                    )
+                )
+            else:
+                # Save all to temporary log
+                self.log_history.append(log)
+            finally:
+                # Always write with intervals
+                now = time.time()
+                if now - self._last_write_time > self._write_interval:
+                    self.write()
+                    self._last_write_time = now
+                    self.update_file_handler()
+
+        # Finish up
+        self.log_history.append(
+            LogEntry(
+                LogLevelsE.INFO.name,
+                "Finish signal received, saving log file and exiting"
+            )
+        )
+        self.write()
+        self.debug_file_handler.writelines(
+            [str(log) for log in self.log_history]
+        )
+        self.debug_file_handler.close()
+        self.file_handler.close()
+
+    def write(self) -> None:
+        # Write important ones
+        to_write: List[str] = []
+        for history_log in self.log_history:
+            if not history_log.consumed and getattr(LogLevelsE, history_log.level).value >= self._level:
+                history_log.consumed = True
+                to_write.append(str(history_log))
+        
+        self.file_handler.writelines(to_write)
+
+        # Trimming
+        if len(self.log_history) > self._history_length * 2:
+            self.log_history.append(
+                LogEntry(
+                    LogLevelsE.DEBUG.name,
+                    "Log history length exceeded, trimming"
+                )
+            )
+            self.log_history = self.log_history[-self._history_length:]
+
+    def update_file_handler(self) -> None:
+        # For persistent operations
+        today = datetime.date.today()
+        if today != self._date:
+            self.file_handler = self.create_file_handler()
+            self.queue.put(LogEntry(LogLevelsE.INFO.name, f"Update log file handler successful"))
+            self._date = today
+    
+    def create_file_handler(self) -> TextIOWrapper:
+        log_file_location: str = os.path.join(self._log_directory, f"{datetime.date.today()}.log")
+        if not os.path.isfile(log_file_location) and not os.path.isdir(log_file_location):
+            with open(log_file_location, "w", encoding="utf-8"):
+                print("Log file created successfully.")
+        return open(
+            log_file_location,
+            "a", 
+            encoding="utf-8", 
+            buffering=self._buffer
+            )
+            
 
 class Logger:
-    # Following parameters should be set at the top-level environment of the project
-    _log_folder_path = "" # The abs _log_folder_path
-    
-    # Internal variable
-    _log_buffer: List[Tuple[LogLevels, str]] = []
-    _isInit: bool = False
-    _log_file_handle: TextIOWrapper = tempfile.TemporaryFile("w")
-    _log_level: LogLevels = "INFO"
-    _debug_queue: DebugQueue = DebugQueue()
-    
-    # Constant
-    numerical_map: Dict[LogLevels, Literal[0, 1, 2, 3]]= {
-        "DEBUG": 0,
-        "INFO": 1,
-        "WARNING": 2,
-        "ERROR": 3
-    }
+    _backend: ClassVar[_Logger]
+    _queue: ClassVar[multiprocessing.JoinableQueue[LogEntry]]
+    _isInit: ClassVar[bool]
 
     @classmethod
-    def _log_location(cls):
-        file_name = f"{datetime.date.today()}.log"
-        return os.path.join(cls._log_folder_path, file_name)
-
-    @classmethod
-    def _create_log_file(cls):
-        if not os.path.isfile(cls._log_location()) and not os.path.isdir(cls._log_location()):
-            with open(cls._log_location(), "w", encoding="utf-8"):
-                print("Create log file successfully.")
-
-    def __init__(self, log_folder_path: str, project_root_path: str = os.getcwd(), log_level: LogLevels = "INFO", buffering: int = 1024):
-        """Init Logger
+    def bootstrap(
+        cls, 
+        log_folder_path: str,
+        *args,
+        log_level: LogLevels = LogLevelsE.INFO.name, 
+        buffering: int = 4096,
+        **kwargs,
+        ) -> None:
+        """
+        Initialization method for Logger
 
         Args:
-            log_folder_path (str): path to log folder relative to project root path
-            project_root_path (str, optional): DEPRECATED! DOES NOTHING
-
-        Raises:
-            ProjectRootChanged: Project root directory should not be changed once set
+            log_folder_path (str): folder to put log files, should be absolute path
+            log_level (LogLevels, optional): log level at which it will be logged. Defaults to INFO.
+            buffering (int, optional): size of the writing buffer. Defaults to 4096.
         """
-        # Save input
-        type(self)._log_folder_path = os.path.abspath(log_folder_path)
-        type(self)._log_level = log_level
-
-        self._debug_queue.log_location = self._log_folder_path
-
-        # Sanity check
-        if self._log_folder_path and log_folder_path and not os.path.samefile(log_folder_path, self._log_folder_path):
-            self.error("One should not change project root path")
-            raise ProjectRootChanged
-
-        # Create log folder
-        if not os.path.isfile(self._log_folder_path) and not os.path.isdir(self._log_folder_path):
-            create_folder_if_not_exists(self._log_folder_path)
-
-        # Create file IO handle
-        self._log_file_handle.close()
-        type(self)._log_file_handle = open(self._log_location(), "a", encoding="utf-8", buffering=buffering)
-
-        # Save previous logs
-        self._log_file_handle.writelines(f"\n{datetime.datetime.now()} INIT Logger successful\n")
-        for entry in self._log_buffer:
-            composed_log_entry = self._log_composer(*entry)
-            print(composed_log_entry)
-            self._log_file_handle.writelines(composed_log_entry)
-        
-        # Empty log buffer
-        type(self)._log_buffer = []
-
-        # Update flags
-        type(self)._isInit = True
-        print(f"Logger init process finished, Logger isInit is set to {self._isInit}.")
-        print(f"Now respecting log level, {log_level}.")
-
-    @classmethod
-    def info(cls, msg: str) -> None:
-        cls._log("INFO", msg)
+        cls._queue = multiprocessing.JoinableQueue[LogEntry]()
+        cls._isFinish: threading.Event = threading.Event()
+        cls._backend = _Logger(
+            log_queue = cls._queue, 
+            log_directory = log_folder_path,
+            log_level = log_level,
+            log_buffering = buffering,
+            isFinish = cls._isFinish
+            )
+        cls._isInit = True
+        print(LogEntry(LogLevelsE.INFO.name, "Logger init successfully"))
 
     @classmethod
     def debug(cls, msg: str) -> None:
-        cls._log("DEBUG", msg)
+        cls._logging(LogEntry(LogLevelsE.DEBUG.name, msg))
+    
+    @classmethod
+    def info(cls, msg: str) -> None:
+        cls._logging(LogEntry(LogLevelsE.INFO.name, msg))
 
     @classmethod
     def warning(cls, msg: str) -> None:
-        cls._log("WARNING", msg)
+        cls._logging(LogEntry(LogLevelsE.WARNING.name, msg))
 
     @classmethod
     def error(cls, msg :str) -> None:
-        cls._log("ERROR", msg)
+        cls._logging(LogEntry(LogLevelsE.ERROR.name, msg))
+    
+    @classmethod
+    def _logging(cls, log_entry: LogEntry) -> None:
+        cls._queue.put(log_entry)
+        if not cls._isInit:
+            print(log_entry)
 
     @classmethod
-    def set_log_level(cls, level: LogLevels) -> None:
-        cls._log_level = level
-        Logger.warning(f"Log level is manually set to {level}")
+    def finish(cls) -> None:
+        cls._queue.join()
+        cls._isFinish.set()
 
     @classmethod
-    def _log(cls, level: LogLevels, msg: str) -> None:
-        # Compose log
-        composed_log_entry = cls._log_composer(level, msg)
-        if cls._isInit:
-            # Log level filter
-            if cls.numerical_map[level] >= cls.numerical_map[cls._log_level]:
-                # The file handler is only to make static checker happy
-                # Write to file
-                cls._log_file_handle.writelines(composed_log_entry)
-            
-            # Keep track of the latest entry
-            cls._debug_queue.append(composed_log_entry)
-        else:
-            # Write to buffer, not file
-            cls._log_buffer.append((level, msg))
-            print(composed_log_entry)
-        return
+    def set_log_level(cls, log_level: LogLevels) -> None:
+        cls.info(f"Log level is set to {log_level}, but it is not implemented")
 
-    @staticmethod
-    def _log_composer(level: LogLevels, msg: str) -> str:
-        return f"{datetime.datetime.now()} {level.upper()}: {msg}\n"
-        
 
 @atexit.register
-def clean_log_buffer():
+def write_log_buffer():
     # Clean up logger buffer when crashing
-    Logger._log_file_handle.close()
-    Logger._debug_queue.dump()
-
-def logger_showoff() -> None:
-    # Demonstrate the logger
-    Logger("log")
-    print(f"Today is {datetime.date.today()}")
-    Logger.info("LOGGER IS DeMoInG.")
-
-if __name__ == "__main__":
-    logger_showoff()
+    Logger.finish()
