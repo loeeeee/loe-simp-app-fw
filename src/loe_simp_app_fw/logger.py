@@ -4,9 +4,10 @@ import os
 import datetime
 from typing import ClassVar, Literal, List, TypeAlias, Union
 from dataclasses import dataclass, field
-import atexit
 import multiprocessing
-import threading
+from multiprocessing import JoinableQueue, Process, Event
+from multiprocessing.synchronize import Event as EventType
+from queue import Empty
 import time
 
 # Do not write the Log until the explicit initialization of the logger
@@ -29,20 +30,22 @@ class LogEntry:
     consumed: bool = field(default=False, kw_only=True)
 
     def __str__(self) -> str:
-        return f"{datetime.datetime.now()} {self.level.upper()}: {self.message}"
+        return f"{datetime.datetime.now()} {self.level.upper()}: {self.message}\n"
 
 
-class _Logger(multiprocessing.Process):
+class _Logger(Process):
     def __init__(
         self, 
-        log_queue: multiprocessing.JoinableQueue[LogEntry], 
+        log_queue: JoinableQueue, 
         log_directory: Union[str, os.PathLike], 
         log_buffering: int,
         log_level: LogLevels, 
-        isFinish: threading.Event,
+        isFinish: EventType,
         *args, 
         ) -> None:
-        super().__init__(daemon=True, name="Logger Backend")
+        super().__init__(
+            name="Logger Backend"
+            )
         self._level: int = getattr(LogLevelsE, log_level).value
         self._buffer: int = log_buffering
         self._log_directory = log_directory
@@ -50,9 +53,9 @@ class _Logger(multiprocessing.Process):
         self._isFinish = isFinish
         self._history_length: int = 3000
         self._last_write_time: float = time.time()
-        self._write_interval: float = 5.0
+        self._write_interval: float = 2.0
 
-        self.queue: multiprocessing.JoinableQueue[LogEntry] = log_queue
+        self.queue: JoinableQueue = log_queue
         self.file_handler = self.create_file_handler()
         self.debug_file_handler = open(
             os.path.join(log_directory, "debug.log"),
@@ -64,10 +67,10 @@ class _Logger(multiprocessing.Process):
 
     def run(self) -> None:
         # Main loop
-        while not self._isFinish.is_set():
+        while not self._isFinish.is_set() or not self.queue.empty():
             try:
                 log = self.queue.get(timeout=self._write_interval)
-            except multiprocessing.TimeoutError:
+            except (multiprocessing.TimeoutError, Empty):
                 self.log_history.append(
                     LogEntry(
                         LogLevelsE.DEBUG.name,
@@ -77,6 +80,7 @@ class _Logger(multiprocessing.Process):
             else:
                 # Save all to temporary log
                 self.log_history.append(log)
+                self.queue.task_done()
             finally:
                 # Always write with intervals
                 now = time.time()
@@ -98,6 +102,7 @@ class _Logger(multiprocessing.Process):
         )
         self.debug_file_handler.close()
         self.file_handler.close()
+        self.close()
 
     def write(self) -> None:
         # Write important ones
@@ -142,8 +147,9 @@ class _Logger(multiprocessing.Process):
 
 class Logger:
     _backend: ClassVar[_Logger]
-    _queue: ClassVar[multiprocessing.JoinableQueue[LogEntry]]
+    _queue: ClassVar[JoinableQueue]
     _isInit: ClassVar[bool]
+    _isFinish: ClassVar[EventType]
 
     @classmethod
     def bootstrap(
@@ -162,8 +168,8 @@ class Logger:
             log_level (LogLevels, optional): log level at which it will be logged. Defaults to INFO.
             buffering (int, optional): size of the writing buffer. Defaults to 4096.
         """
-        cls._queue = multiprocessing.JoinableQueue[LogEntry]()
-        cls._isFinish: threading.Event = threading.Event()
+        cls._queue = JoinableQueue()
+        cls._isFinish = Event()
         cls._backend = _Logger(
             log_queue = cls._queue, 
             log_directory = log_folder_path,
@@ -171,8 +177,9 @@ class Logger:
             log_buffering = buffering,
             isFinish = cls._isFinish
             )
+        cls._backend.start()
         cls._isInit = True
-        print(LogEntry(LogLevelsE.INFO.name, "Logger init successfully"))
+        cls._print(LogEntry(LogLevelsE.INFO.name, "Logger init successfully"))
 
     @classmethod
     def debug(cls, msg: str) -> None:
@@ -194,19 +201,35 @@ class Logger:
     def _logging(cls, log_entry: LogEntry) -> None:
         cls._queue.put(log_entry)
         if not cls._isInit:
-            print(log_entry)
+            print(log_entry, end="")
 
     @classmethod
-    def finish(cls) -> None:
-        cls._queue.join()
+    def _finish(cls) -> None:
         cls._isFinish.set()
+        cls._print(LogEntry(LogLevelsE.DEBUG.name, f"Logger frontend flags: {cls._isFinish.is_set()}"))
+        cls._queue.join()
 
     @classmethod
     def set_log_level(cls, log_level: LogLevels) -> None:
         cls.info(f"Log level is set to {log_level}, but it is not implemented")
 
+    @staticmethod
+    def _print(log: LogEntry) -> None:
+        print(log, end="")
 
-@atexit.register
-def write_log_buffer():
-    # Clean up logger buffer when crashing
-    Logger.finish()
+
+def main():
+    Logger.bootstrap(
+        "./log"
+    )
+    Logger.debug("COOL MESSAGE")
+    Logger.error("Not cool")
+    Logger.error("Not cool")
+    Logger.error("Not cool")
+    Logger.error("Not cool")
+    Logger.error("Not cool")
+    Logger.error("Not cool")
+    Logger._finish()
+
+if __name__ == "__main__":
+    main()
