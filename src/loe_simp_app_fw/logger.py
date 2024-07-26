@@ -179,6 +179,9 @@ class Logger:
             buffering (int, optional): size of the writing buffer. Defaults to 4096.
         """
         # Handles when backend gets repeatedly created
+        if hasattr(cls, "_backend"):
+            cls.warning("Backend gets created multiple times")
+            return
 
         # Create backend normally
         cls._backend = _Logger(
