@@ -1,4 +1,7 @@
 import atexit
+import sys
+import signal
+
 from .cacher import GlobalCacheManager
 from .logger import Logger
 
@@ -15,3 +18,10 @@ def register() -> None:
     def write_log_buffer():
         # Clean up logger buffer when crashing
         Logger._finish()
+
+    def signal_handler_sigint(signal, frame) -> None:
+        Logger.info("SIGINT received in all process")
+        sys.exit() # This will run all the registered cleanup code
+
+    # Handle keyboard interrupt and exit gracefully instead of raising KeyBoardInterrupt everywhere
+    signal.signal(signal.SIGINT, signal_handler_sigint)

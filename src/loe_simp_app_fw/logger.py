@@ -44,7 +44,8 @@ class _Logger(Process):
         *args, 
         ) -> None:
         super().__init__(
-            name="Logger Backend"
+            name="Logger Backend",
+            daemon=True,
             )
         self._level: int = getattr(LogLevelsE, log_level).value
         self._buffer: int = log_buffering
@@ -66,30 +67,38 @@ class _Logger(Process):
         self.log_history: List[LogEntry] = []
 
     def run(self) -> None:
-        # Main loop
         while not self._isFinish.is_set() or not self.queue.empty():
-            try:
-                log = self.queue.get(timeout=self._write_interval)
-            except (multiprocessing.TimeoutError, Empty):
-                self.log_history.append(
-                    LogEntry(
-                        LogLevelsE.DEBUG.name,
-                        "A timeout happened because no logs are received"
-                    )
-                )
-            else:
-                # Save all to temporary log
-                self.log_history.append(log)
-                self.queue.task_done()
-            finally:
-                # Always write with intervals
-                now = time.time()
-                if now - self._last_write_time > self._write_interval:
-                    self.write()
-                    self._last_write_time = now
-                    self.update_file_handler()
+            # try:
+            self.main_loop()
 
         # Finish up
+        self.finish_up()
+
+    def main_loop(self) -> None:
+        # Main loop
+        try:
+            log = self.queue.get(timeout=self._write_interval)
+        except (multiprocessing.TimeoutError, Empty):
+            self.log_history.append(
+                LogEntry(
+                    LogLevelsE.DEBUG.name,
+                    "A timeout happened because no logs are received"
+                )
+            )
+        else:
+            # Save all to temporary log
+            self.log_history.append(log)
+            self.queue.task_done()
+        finally:
+            # Always write with intervals
+            now = time.time()
+            if now - self._last_write_time > self._write_interval:
+                self.write()
+                self._last_write_time = now
+                self.update_file_handler()
+        return
+
+    def finish_up(self) -> None:
         self.log_history.append(
             LogEntry(
                 LogLevelsE.INFO.name,
@@ -103,6 +112,7 @@ class _Logger(Process):
         self.debug_file_handler.close()
         self.file_handler.close()
         self.close()
+        return
 
     def write(self) -> None:
         # Write important ones
@@ -168,6 +178,9 @@ class Logger:
             log_level (LogLevels, optional): log level at which it will be logged. Defaults to INFO.
             buffering (int, optional): size of the writing buffer. Defaults to 4096.
         """
+        # Handles when backend gets repeatedly created
+
+        # Create backend normally
         cls._backend = _Logger(
             log_queue = cls._queue, 
             log_directory = log_folder_path,
@@ -203,7 +216,8 @@ class Logger:
 
     @classmethod
     def _finish(cls) -> None:
-        cls._isFinish.set()
+        if not cls._isFinish.is_set():
+            cls._isFinish.set()
         cls._print(LogEntry(LogLevelsE.DEBUG.name, f"Logger frontend flags: {cls._isFinish.is_set()}"))
         cls._queue.join()
 
