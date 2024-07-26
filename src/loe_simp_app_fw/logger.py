@@ -147,9 +147,9 @@ class _Logger(Process):
 
 class Logger:
     _backend: ClassVar[_Logger]
-    _queue: ClassVar[JoinableQueue]
+    _queue: ClassVar[JoinableQueue] = JoinableQueue()
     _isInit: ClassVar[bool]
-    _isFinish: ClassVar[EventType]
+    _isFinish: ClassVar[EventType] = Event()
 
     @classmethod
     def bootstrap(
@@ -168,8 +168,6 @@ class Logger:
             log_level (LogLevels, optional): log level at which it will be logged. Defaults to INFO.
             buffering (int, optional): size of the writing buffer. Defaults to 4096.
         """
-        cls._queue = JoinableQueue()
-        cls._isFinish = Event()
         cls._backend = _Logger(
             log_queue = cls._queue, 
             log_directory = log_folder_path,
