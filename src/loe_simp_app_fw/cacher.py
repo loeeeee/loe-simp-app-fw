@@ -3,7 +3,6 @@ from datetime import date, timedelta
 from .logger import Logger
 import hashlib
 import os
-import atexit
 import json
 
 # Typings
@@ -203,11 +202,3 @@ class GlobalCacheManager:
         hash_obj.update(source.encode('utf-8'))
         # Return the hexadecimal digest of the hash
         return hash_obj.hexdigest()
-
-@atexit.register
-def save_to_disk():
-    Logger.debug("Cacher detects exit")
-    if GlobalCacheManager._isSetup:
-        GlobalCacheManager._suspend()
-    else:
-        Logger.warning("Cacher is never setup")
