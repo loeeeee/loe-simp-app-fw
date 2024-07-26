@@ -148,7 +148,7 @@ class _Logger(Process):
 class Logger:
     _backend: ClassVar[_Logger]
     _queue: ClassVar[JoinableQueue] = JoinableQueue()
-    _isInit: ClassVar[bool]
+    _isInit: ClassVar[bool] = False
     _isFinish: ClassVar[EventType] = Event()
 
     @classmethod
