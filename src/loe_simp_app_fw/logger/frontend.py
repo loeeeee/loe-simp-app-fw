@@ -4,7 +4,7 @@ from .middleware import Middleware
 from .model import LogLevels, LogEntry, LogLevelsE
 
 class Logger:
-    _middleware: ClassVar[Middleware]
+    _middleware: ClassVar[Middleware] = Middleware()
     _isInit: ClassVar[bool] = False
     _isPrintAll: ClassVar[bool] = False
     
@@ -32,7 +32,6 @@ class Logger:
 
         # Create backend normally
         cls._isPrintAll = print_all
-        cls._middleware = Middleware()
         cls._middleware.setup(
             log_directory=log_folder_path,
             log_level=log_level,
