@@ -26,7 +26,7 @@ class Logger:
             buffering (int, optional): size of the writing buffer. Defaults to 4096.
         """
         # Handles when backend gets repeatedly created
-        if hasattr(cls, "_middleware"):
+        if hasattr(cls._middleware, "backend_s") or hasattr(cls._middleware, "backend_m"):
             cls.warning("Backend gets created multiple times")
             return
 
