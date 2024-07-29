@@ -1,5 +1,5 @@
 # Backend in the main thread
-from model import LogEntry, LogLevels, BackendHelper, ResourceLocator
+from .model import LogEntry, LogLevels, BackendHelper, ResourceLocator
 
 class Backend(BackendHelper):
     def __init__(
