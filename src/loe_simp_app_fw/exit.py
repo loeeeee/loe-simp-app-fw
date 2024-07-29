@@ -17,7 +17,8 @@ def register() -> None:
     @atexit.register
     def write_log_buffer():
         # Clean up logger buffer when crashing
-        Logger._finish()
+        Logger._middleware.switch_backend_s_to_backend_m()
+        Logger._middleware.shutdown()
 
     def signal_handler_sigint(signal, frame) -> None:
         Logger.info("SIGINT received in all process")
