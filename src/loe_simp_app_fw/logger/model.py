@@ -62,15 +62,16 @@ class BackendHelper:
 
     def _write_normal_log(self, noInterval: bool = False) -> None:
         # Judge if the interval is reached
-        if time.time() - self._write_interval >= self.last_write_time or noInterval:
+        now = time.time()
+        if now - self._write_interval >= self.last_write_time or noInterval:
             to_write: List[str] = self._get_unconsumed_normal_log()
-            self.last_write_time = time.time()
-        else:
-            # Not yet ready
-            return
-        
-        # Write normal logs to file, this can be either one-shot or not
-        self.normal_file_handler.writelines(to_write)
+            # Write normal logs to file, this can be either one-shot or not
+            self.normal_file_handler.writelines(to_write)
+            self.last_write_time = now
+            self.logs.append(
+                LogEntry(LogLevelsE.DEBUG.name, "One timed write happens")
+            )
+        return
 
     def _write_debug_log(self) -> None:
         # Write debug files, this is a one-shot operation
