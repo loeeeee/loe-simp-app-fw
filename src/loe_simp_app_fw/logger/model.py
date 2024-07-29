@@ -109,7 +109,8 @@ class BackendHelper:
         return open(
             log_file_location,
             "a", 
-            encoding="utf-8", 
+            encoding="utf-8",
+            buffering=1,
             )
 
     def _create_debug_file_handler(self) -> TextIOWrapper:
