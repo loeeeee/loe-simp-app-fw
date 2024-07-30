@@ -5,10 +5,10 @@ from .csvnia import CSVReader, CSVWriter
 from .notebook import isNotebook
 from .start import main as init_repo
 from .request_handler import RequestError, RequestHandler, RetryCounter
-from .exit import register
+from .exit import Register
 
 # Register exit sequence in order
-register()
+Register.register()
 
 __all__ = [
     "Logger", 
