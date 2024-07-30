@@ -1,7 +1,7 @@
 from typing import ClassVar
 
 from .middleware import Middleware
-from .model import LogLevels, LogEntry, LogLevelsE
+from .model import LogLevels, LogEntry, LogLevelsE, Exceptions
 
 class Logger:
     _middleware: ClassVar[Middleware] = Middleware()
@@ -27,8 +27,8 @@ class Logger:
         """
         # Handles when backend gets repeatedly created
         if hasattr(cls._middleware, "backend_s") or hasattr(cls._middleware, "backend_m"):
-            cls.warning("Backend gets created multiple times")
-            return
+            cls.error("Backend gets created multiple times")
+            raise Exceptions.DuplicatedBootstrap
 
         # Create backend normally
         cls._isPrintAll = print_all

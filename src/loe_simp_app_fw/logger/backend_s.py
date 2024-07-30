@@ -1,11 +1,16 @@
 # Backend in a separate thread
+from io import TextIOWrapper
 import multiprocessing
-from multiprocessing import JoinableQueue, Process
+from multiprocessing import JoinableQueue, Process, set_start_method
 from multiprocessing.synchronize import Event as EventType
 from queue import Empty
 
 from .model import BackendHelper, LogEntry, LogLevels, ResourceLocator, LogLevelsE
 
+try:
+    set_start_method("spawn")
+except RuntimeError:
+    pass
 
 class Backend(BackendHelper, Process):
     def __init__(
@@ -26,7 +31,8 @@ class Backend(BackendHelper, Process):
             log_level, 
             *args, 
             write_interval=write_interval, 
-            debug_log_length=debug_log_length, 
+            debug_log_length=debug_log_length,
+            noFileHandler=True, 
             **kwargs
             )
 
@@ -41,8 +47,15 @@ class Backend(BackendHelper, Process):
         self.queue: JoinableQueue = log_queue
 
     def run(self) -> None:
+        # Create file handler first
+        self.debug_file_handler: TextIOWrapper = self._create_debug_file_handler()
+        self.normal_file_handler: TextIOWrapper = self._create_normal_file_handler()
+        
+        # Begin main loop
         while not self.finish_flag.is_set() and not self.queue.empty():
             self._main()
+        
+        # Clean up and exit
         self._finish()
         return
 
