@@ -24,3 +24,8 @@ dependencies = [
 [project.urls]
 Homepage = "https://github.com/loeeeee/loe-simp-app-fw"
 Issues = "https://github.com/loeeeee/loe-simp-app-fw/issues"
+
+[tool.hatch.build.targets.sdist]
+exclude = [
+  "/src/tests",
+]
