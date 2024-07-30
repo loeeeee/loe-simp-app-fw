@@ -25,6 +25,23 @@ class BackendE(Enum):
     MAIN = auto()
 
 
+class Exceptions:
+    class DuplicatedBootstrap(Exception):
+        pass
+
+    class BackendProcessNotDead(Exception):
+        pass
+
+    class QueueCorruption(Exception):
+        pass
+
+    class NoBackendFound(Exception):
+        pass
+
+    class InvalidBackendSwitch(Exception):
+        pass
+
+
 @dataclass
 class LogEntry:
     level: LogLevels
@@ -45,6 +62,7 @@ class BackendHelper:
         *args,
         write_interval: float = 5.0,
         debug_log_length: int = 5000,
+        noFileHandler: bool = False,
         **kwargs,
         ) -> None:
         # Settings
@@ -57,8 +75,9 @@ class BackendHelper:
         # Internal variables
         self.logs: List[LogEntry] = []
         self.last_write_time: float = time.time()
-        self.debug_file_handler: TextIOWrapper = self._create_debug_file_handler()
-        self.normal_file_handler: TextIOWrapper = self._create_normal_file_handler()
+        if not noFileHandler:
+            self.debug_file_handler: TextIOWrapper = self._create_debug_file_handler()
+            self.normal_file_handler: TextIOWrapper = self._create_normal_file_handler()
 
     def _write_normal_log(self, noInterval: bool = False) -> None:
         # Judge if the interval is reached
