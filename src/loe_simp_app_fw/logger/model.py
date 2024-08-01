@@ -41,9 +41,13 @@ class Exceptions:
     class InvalidBackendSwitch(Exception):
         pass
 
+    class UnexpectedBackend(Exception):
+        pass
+
 
 @dataclass
 class LogEntry:
+    timestamp: datetime.datetime = field(default_factory=datetime.datetime.now, kw_only=True)
     level: LogLevels
     message: str
 
@@ -51,7 +55,7 @@ class LogEntry:
     consumed: bool = field(default=False, kw_only=True)
 
     def __str__(self) -> str:
-        return f"{datetime.datetime.now()} {self.level.upper()}: {self.message}\n"
+        return f"{str(self.timestamp.time())} {self.level.upper()}: {self.message}\n"
 
 
 class BackendHelper:
@@ -76,7 +80,6 @@ class BackendHelper:
         self.logs: List[LogEntry] = []
         self.last_write_time: float = time.time()
         if not noFileHandler:
-            self.debug_file_handler: TextIOWrapper = self._create_debug_file_handler()
             self.normal_file_handler: TextIOWrapper = self._create_normal_file_handler()
 
     def _write_normal_log(self, noInterval: bool = False) -> None:
@@ -94,10 +97,10 @@ class BackendHelper:
 
     def _write_debug_log(self) -> None:
         # Write debug files, this is a one-shot operation
-        self.debug_file_handler.writelines(
-            [str(log) for log in self.logs[-self._debug_log_length:]]
-        )
-        self.debug_file_handler.close()
+        with self._create_debug_file_handler() as handler:
+            handler.writelines(
+                [str(log) for log in self.logs[-self._debug_log_length:]]
+            )
 
     def _get_unconsumed_normal_log(self) -> List[str]:
         # Write important ones normally
