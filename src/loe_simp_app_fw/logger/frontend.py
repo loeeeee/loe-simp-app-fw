@@ -37,9 +37,7 @@ class Logger:
             log_level=log_level,
         )
 
-        cls._middleware.log(LogEntry(LogLevelsE.INFO.name, "Logger init successfully"))
-        cls._middleware.switch_none_to_backend_s()
-        cls._middleware.log(LogEntry(LogLevelsE.INFO.name, "Switch log backend to separate process"))
+        cls._middleware.log(LogEntry(LogLevelsE.INFO.name, "Logger frontend init successfully"))
 
     @classmethod
     def debug(cls, msg: str) -> None:

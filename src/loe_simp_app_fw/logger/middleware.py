@@ -7,6 +7,21 @@ from .backend_s import Backend as BackendS
 from .model import Backend, Exceptions, LogEntry, LogLevelsE, ResourceLocator, LogLevels
 
 class Middleware:
+    __slots__ = [
+        "log", 
+        "logs", 
+        "_current_backend", 
+        "queue", 
+        "isFinish", 
+        "_isSetUp",
+        "_directory",
+        "_level",
+        "_write_interval",
+        "backend_s",
+        "backend_m",
+        "_debug_log_length",
+        ]
+
     def __init__(
         self,
         *args,
@@ -19,8 +34,6 @@ class Middleware:
         self.backend_s: BackendS
         self._current_backend: Backend = "NONE"
 
-        self.log = self._log_list
-
         self.queue: JoinableQueue = JoinableQueue()
         self.isFinish: EventType = Event()
 
@@ -32,11 +45,13 @@ class Middleware:
 
     def _log_list(self, log: LogEntry) -> None:
         self.logs.append(log)
-        print(log, end="")
+        self.queue.put(log)
+        self._print(log)
         return
 
     def _log_backend_m(self, log: LogEntry) -> None:
         self.backend_m.log(log)
+        # print(f"Manually output: {log}", end="")
         return
 
     def _log_backend_s(self, log: LogEntry) -> None:
@@ -66,25 +81,26 @@ class Middleware:
         self._write_interval = write_interval
         self._debug_log_length = debug_log_length
 
+        try:
+            self._judge_backend("NONE")
+        except Exceptions.UnexpectedBackend:
+            self.log(
+                LogEntry(
+                    LogLevelsE.ERROR.name,
+                    f"Current backend, {self._current_backend}, is not expected"
+                )
+            )
+            raise
+        else:
+            self._switch_none_to_backend_s()
         self._isSetUp = True
 
-    def switch_none_to_backend_s(
+    def _switch_none_to_backend_s(
         self, 
         ) -> None:
         """
         Bootstrap the middleware
         """
-        if hasattr(self, "backend_s"):
-            self.log(
-                LogEntry(
-                    LogLevelsE.ERROR.name,
-                    "A backend in separate process already exists"
-                )
-            )
-            raise Exceptions.DuplicatedBootstrap
-
-        self._judge_backend("NONE")
-
         # Setup the new backend
         self.backend_s = BackendS(
             log_directory=self._directory,
@@ -97,7 +113,7 @@ class Middleware:
         self.log = self._log_backend_s
         # Start multiprocessing backend
         self.backend_s.start()
-        self._current_backend = "SEPARATE"
+        self._set_current_backend("SEPARATE")
 
         self.log(
             LogEntry(
@@ -106,35 +122,22 @@ class Middleware:
             )
         )
 
-        # Load logs into queue
-        [self.log(i) for i in self.logs]
         # Clean instance logs
         self.logs = []
 
         self.log(
             LogEntry(
                 LogLevelsE.INFO.name,
-                "Clean up instance logs complete"
+                "Clean up instance logs that is in temporary list complete"
             )
         )
 
-    def switch_backend_s_to_backend_m(
+    def _switch_backend_s_to_backend_m(
         self,
         ) -> None:
         """
         Prepare to terminate the middleware
-        """
-        if not hasattr(self, "backend_s"):
-            self.log(
-                LogEntry(
-                    LogLevelsE.ERROR.name,
-                    "A backend in separate process does not exist"
-                )
-            )
-            raise Exceptions.NoBackendFound
-
-        self._judge_backend("SEPARATE")
-        
+        """        
         # Stop the old backend
         self.isFinish.set()
         self.backend_s.join()
@@ -155,7 +158,7 @@ class Middleware:
         )
         self.log = self._log_backend_m
 
-        self._current_backend = "MAIN"
+        self._set_current_backend("MAIN")
         
         # Deal with items left in queue
         if self.logs:
@@ -182,27 +185,65 @@ class Middleware:
         
         self.queue.join()
 
+    def _switch_backend_m_to_none(self) -> None:
+        # Close up backend in main process
+        self.backend_m.finish()
+        # Set log method
+        self.log = self._log_list
+        self._set_current_backend("NONE")
+
     def shutdown(self) -> None:
-        self.switch_backend_s_to_backend_m()
-        if self.backend_s.is_alive():
+        # Shutdown sequence: 
+        #   Separate backend, main backend, none
+
+        try:
+            self._judge_backend("SEPARATE")
+        except Exceptions.UnexpectedBackend:
             self.log(
                 LogEntry(
-                    LogLevelsE.ERROR.name,
-                    "Backend in separate process is still alive"
+                    LogLevelsE.WARNING.name,
+                    "No backend in separate process found"
                 )
             )
-            raise Exceptions.BackendProcessNotDead
+            raise
+        else:
+            self._switch_backend_s_to_backend_m()
+            if self.backend_s.is_alive():
+                self.log(
+                    LogEntry(
+                        LogLevelsE.ERROR.name,
+                        "Backend in separate process is still alive"
+                    )
+                )
+                raise Exceptions.BackendProcessNotDead
 
-        self._judge_backend("MAIN")
-        
-        self.backend_m.finish()
+        try:
+            self._judge_backend("MAIN")
+        except Exceptions.UnexpectedBackend:
+            self.log(
+                LogEntry(
+                    LogLevelsE.WARNING.name,
+                    "No backend in main process found"
+                )
+            )
+            raise
+        else:
+            self._switch_backend_m_to_none()
+            self.log(
+                LogEntry(
+                    LogLevelsE.INFO.name,
+                    "All file backend shutdown, logs no longer save to file"
+                )
+            )
+
+    def _set_current_backend(self, backend: Backend) -> None:
         self.log(
             LogEntry(
                 LogLevelsE.INFO.name,
-                "All file backend shutdown, logs no longer save to file"
-            )
+                f"Current backend is switched from {self._current_backend} to {backend}"
+                )
         )
-        self._current_backend = "NONE"
+        self._current_backend = backend
 
     def _judge_backend(self, expected: Backend) -> None:
         if self._current_backend != expected:
@@ -212,4 +253,8 @@ class Middleware:
                     f"Invalid switching backend, current backend {self._current_backend}, expecting {expected}"
                 )
             )
-            raise Exceptions.InvalidBackendSwitch
+            raise Exceptions.UnexpectedBackend
+        
+    @classmethod
+    def _print(cls, log: LogEntry) -> None:
+        print(log, end="")
