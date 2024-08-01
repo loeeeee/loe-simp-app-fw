@@ -33,5 +33,5 @@ class TestLogger(unittest.TestCase):
 
     @unittest.expectedFailure
     def test_switch_duplication(self) -> None:
-        self.assertIsNone(Logger._middleware.switch_none_to_backend_s())
+        self.assertIsNone(Logger._middleware._switch_none_to_backend_s())
         
