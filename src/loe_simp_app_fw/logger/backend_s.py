@@ -1,23 +1,19 @@
 # Backend in a separate thread
 from io import TextIOWrapper
-import multiprocessing
-from multiprocessing import JoinableQueue, Process, set_start_method
+import multiprocessing as mp
 from multiprocessing.synchronize import Event as EventType
 from queue import Empty
 
 from .model import BackendHelper, LogEntry, LogLevels, ResourceLocator, LogLevelsE
 
-try:
-    set_start_method("spawn")
-except RuntimeError:
-    pass
+mp.set_start_method("fork", force=True) # Spawn is not possible right now
 
-class Backend(BackendHelper, Process):
+class Backend(BackendHelper, mp.Process):
     def __init__(
         self, 
         log_directory: ResourceLocator, 
         log_level: LogLevels, 
-        log_queue: JoinableQueue,
+        log_queue: mp.JoinableQueue,
         isFinish: EventType,
         *args, 
         write_interval: float = 5.0, 
@@ -36,15 +32,14 @@ class Backend(BackendHelper, Process):
             **kwargs
             )
 
-        Process.__init__(
+        mp.Process.__init__(
             self,
-            daemon=True,
             name="Logger Backend",
         )
 
         # Internal variables
         self.finish_flag: EventType = isFinish
-        self.queue: JoinableQueue = log_queue
+        self.queue: mp.JoinableQueue = log_queue
 
     def run(self) -> None:
         # Create file handler first
@@ -52,7 +47,7 @@ class Backend(BackendHelper, Process):
         self.normal_file_handler: TextIOWrapper = self._create_normal_file_handler()
         
         # Begin main loop
-        while not self.finish_flag.is_set() and not self.queue.empty():
+        while not self.finish_flag.is_set() or not self.queue.empty():
             self._main()
         
         # Clean up and exit
@@ -62,7 +57,7 @@ class Backend(BackendHelper, Process):
     def _main(self) -> None:
         try:
             log = self.queue.get(timeout=self._write_interval)
-        except (multiprocessing.TimeoutError, Empty):
+        except (mp.TimeoutError, Empty):
             self.logs.append(
                 LogEntry(
                     LogLevelsE.DEBUG.name,
