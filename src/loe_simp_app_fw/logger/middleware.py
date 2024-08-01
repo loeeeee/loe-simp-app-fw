@@ -215,7 +215,6 @@ class Middleware:
                         "Backend in separate process is still alive"
                     )
                 )
-                raise Exceptions.BackendProcessNotDead
 
         try:
             self._judge_backend("MAIN")
