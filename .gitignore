@@ -165,3 +165,4 @@ playground*
 config*.yaml
 !config-example.yaml
 log
+.vscode
