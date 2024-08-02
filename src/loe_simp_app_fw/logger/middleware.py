@@ -51,7 +51,6 @@ class Middleware:
 
     def _log_backend_m(self, log: LogEntry) -> None:
         self.backend_m.log(log)
-        # print(f"Manually output: {log}", end="")
         return
 
     def _log_backend_s(self, log: LogEntry) -> None:
