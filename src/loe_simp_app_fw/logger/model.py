@@ -48,6 +48,7 @@ class Exceptions:
 @dataclass
 class LogEntry:
     timestamp: datetime.datetime = field(default_factory=datetime.datetime.now, kw_only=True)
+    pid: int = field(default_factory=os.getpid, kw_only=True)
     level: LogLevels
     message: str
 
@@ -55,7 +56,7 @@ class LogEntry:
     consumed: bool = field(default=False, kw_only=True)
 
     def __str__(self) -> str:
-        return f"{str(self.timestamp.time())} {self.level.upper()}: {self.message}\n"
+        return f"{str(self.timestamp.time())} [{self.pid}] {self.level.upper()}: {self.message}\n"
 
 
 class BackendHelper:
