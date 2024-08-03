@@ -6,6 +6,16 @@ from .backend_m import Backend as BackendM
 from .backend_s import Backend as BackendS
 from .model import Backend, Exceptions, LogEntry, LogLevelsE, ResourceLocator, LogLevels
 
+_logo: str = """
+    __              _          _____ _                      ___    ____  ____     _______       __
+   / /   ____  ___ ( )_____   / ___/(_)___ ___  ____       /   |  / __ \/ __ \   / ____/ |     / /
+  / /   / __ \/ _ \|// ___/   \__ \/ / __ `__ \/ __ \     / /| | / /_/ / /_/ /  / /_   | | /| / / 
+ / /___/ /_/ /  __/ (__  )   ___/ / / / / / / / /_/ /    / ___ |/ ____/ ____/  / __/   | |/ |/ /  
+/_____/\____/\___/ /____/   /____/_/_/ /_/ /_/ .___(_)  /_/  |_/_/   /_/      /_/      |__/|__/   
+                                            /_/                                                   
+                           
+"""
+
 class Middleware:
     __slots__ = [
         "log", 
@@ -42,6 +52,8 @@ class Middleware:
         self._debug_log_length: int
         self._isSetUp: bool = False
         self._isMultiprocessing: bool = True
+
+        self._print_logo()
 
     # ---------------------------- INTERNAL LOG METHODS ------------------------------
 
@@ -289,6 +301,13 @@ class Middleware:
         while not self.queue.empty():
             self.log(self.queue.get_nowait())
             self.queue.task_done()
+
+    def _print_logo(self) -> None:
+        for line in _logo.split("\n"):
+            self.log(LogEntry(
+                LogLevelsE.INFO.name,
+                line
+            ))
 
     @classmethod
     def _print(cls, log: LogEntry) -> None:
