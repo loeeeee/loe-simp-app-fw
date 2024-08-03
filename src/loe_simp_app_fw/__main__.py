@@ -8,7 +8,7 @@ from argparse import ArgumentParser
 # Setup flags
 isCLI = False
 
-Logger.set_log_level("ERROR")
+Logger.set_log_level("INFO")
 
 # CLI Parser (Only runs once)
 if not isNotebook():
