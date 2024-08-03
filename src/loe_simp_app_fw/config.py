@@ -76,4 +76,5 @@ class FrameworkConfig(BaseConfig):
     log_directory: ClassVar[Annotated[str, "Folder for storing log files"]]     = ""
     log_level: ClassVar[Annotated[LogLevels, "Log levels"]]                     = "INFO"
     log_buffer_size: ClassVar[Annotated[int, "Size of buffer"]]                 = 2048
+    log_multiprocessing: ClassVar[Annotated[bool, "Multiprocessing or not"]]    = True
 
