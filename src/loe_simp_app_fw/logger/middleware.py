@@ -20,6 +20,7 @@ class Middleware:
         "backend_s",
         "backend_m",
         "_debug_log_length",
+        "_isMultiprocessing",
         ]
 
     def __init__(
@@ -42,6 +43,9 @@ class Middleware:
         self._write_interval: float
         self._debug_log_length: int
         self._isSetUp: bool = False
+        self._isMultiprocessing: bool = True
+
+    # ---------------------------- INTERNAL LOG METHODS ------------------------------
 
     def _log_list(self, log: LogEntry) -> None:
         self.logs.append(log)
@@ -56,6 +60,7 @@ class Middleware:
     def _log_backend_s(self, log: LogEntry) -> None:
         self.queue.put(log)
         return
+    # ---------------------------- API METHODS ------------------------------
 
     def setup(
         self,
@@ -63,7 +68,8 @@ class Middleware:
         log_level: LogLevels, 
         *args, 
         write_interval: float = 5.0, 
-        debug_log_length: int = 5000, 
+        debug_log_length: int = 5000,
+        _isMultiprocessing: bool = True, 
         **kwargs
         ) -> None:
         if self._isSetUp:
@@ -79,6 +85,7 @@ class Middleware:
         self._level = log_level
         self._write_interval = write_interval
         self._debug_log_length = debug_log_length
+        self._isMultiprocessing = _isMultiprocessing
 
         try:
             self._judge_backend("NONE")
@@ -93,103 +100,6 @@ class Middleware:
         else:
             self._switch_none_to_backend_s()
         self._isSetUp = True
-
-    def _switch_none_to_backend_s(
-        self, 
-        ) -> None:
-        """
-        Bootstrap the middleware
-        """
-        # Setup the new backend
-        self.backend_s = BackendS(
-            log_directory=self._directory,
-            log_level=self._level,
-            log_queue=self.queue,
-            isFinish=self.isFinish,
-            write_interval=self._write_interval,
-            debug_log_length=self._debug_log_length,
-        )
-        self.log = self._log_backend_s
-        # Start multiprocessing backend
-        self.backend_s.start()
-        self._set_current_backend("SEPARATE")
-
-        self.log(
-            LogEntry(
-                LogLevelsE.INFO.name,
-                "Creating backend in separate process complete"
-            )
-        )
-
-        # Clean instance logs
-        self.logs = []
-
-        self.log(
-            LogEntry(
-                LogLevelsE.INFO.name,
-                "Clean up instance logs that is in temporary list complete"
-            )
-        )
-
-    def _switch_backend_s_to_backend_m(
-        self,
-        ) -> None:
-        """
-        Prepare to terminate the middleware
-        """        
-        # Stop the old backend
-        self.isFinish.set()
-        self.backend_s.join()
-
-        self.log(
-            LogEntry(
-                LogLevelsE.INFO.name,
-                "Stopping backend in separate process complete"
-            )
-        )
-
-        # Setup the new backend
-        self.backend_m = BackendM(
-            log_directory=self._directory,
-            log_level=self._level,
-            write_interval=self._write_interval,
-            debug_log_length=self._debug_log_length
-        )
-        self.log = self._log_backend_m
-
-        self._set_current_backend("MAIN")
-        
-        # Deal with items left in queue
-        if self.logs:
-            print("Logs is not empty during switch, something terribly wrong happened")
-            raise Exceptions.QueueCorruption
-
-        self.log(
-            LogEntry(
-                LogLevelsE.INFO.name,
-                "Switching backend to main thread complete"
-            )
-        )
-
-        while not self.queue.empty():
-            self.log(self.queue.get_nowait())
-            self.queue.task_done()
-
-        self.log(
-            LogEntry(
-                LogLevelsE.INFO.name,
-                f"Clean up queue complete, testing if queue is now empty, {self.queue.empty()}"
-            )
-        )
-        
-        self.queue.join()
-
-    def _switch_backend_m_to_none(self) -> None:
-        # Close up backend in main process
-        self.backend_m.finish()
-        # Set log method
-        self.log = self._log_list
-        self._set_current_backend("NONE")
 
     def shutdown(self) -> None:
         # Shutdown sequence: 
@@ -234,6 +144,96 @@ class Middleware:
                 )
             )
 
+    # ---------------------------- START METHODS ------------------------------
+
+    def _switch_none_to_backend_m(
+        self,
+    ) -> None:
+        """
+        User do not want to have separate process
+        """
+        # Bootstrap backend M
+        self._bootstrap_backend_m()
+        # Move log to backend
+        [self.log(old_log) for old_log in self.logs]
+        # Clean up logs
+        self.logs = []
+
+    def _switch_none_to_backend_s(
+        self,
+        ) -> None:
+        """
+        Bootstrap the middleware
+        """
+        # Bootstrap backend S
+        self._bootstrap_backend_s()
+
+        # Clean instance logs
+        self.logs = []
+
+        self.log(
+            LogEntry(
+                LogLevelsE.INFO.name,
+                "Clean up instance logs that is in temporary list complete"
+            )
+        )
+
+    # ---------------------------- STOP METHODS ------------------------------
+
+    def _switch_backend_s_to_backend_m(
+        self,
+        ) -> None:
+        """
+        Prepare to terminate the multiprocessing middleware
+        """
+        # Stop the old backend
+        self.isFinish.set()
+        self.backend_s.join()
+
+        self.log(
+            LogEntry(
+                LogLevelsE.INFO.name,
+                "Stopping backend in separate process complete"
+            )
+        )
+
+        # Bootstrap backend M
+        self._bootstrap_backend_m()
+        
+        # Deal with items left in queue
+        if self.logs:
+            print("Logs is not empty during switch, something terribly wrong happened")
+            raise Exceptions.QueueCorruption
+
+        self.log(
+            LogEntry(
+                LogLevelsE.INFO.name,
+                "Switching backend from separate to main thread complete"
+            )
+        )
+
+        while not self.queue.empty():
+            self.log(self.queue.get_nowait())
+            self.queue.task_done()
+
+        self.log(
+            LogEntry(
+                LogLevelsE.DEBUG.name,
+                f"Clean up queue complete, testing if queue is now empty, {self.queue.empty()}"
+            )
+        )
+        
+        self.queue.join()
+
+    def _switch_backend_m_to_none(self) -> None:
+        # Close up backend in main process
+        self.backend_m.finish()
+        # Set log method
+        self.log = self._log_list
+        self._set_current_backend("NONE")
+
+    # ---------------------------- HELP METHODS ------------------------------
+    
     def _set_current_backend(self, backend: Backend) -> None:
         self.log(
             LogEntry(
@@ -252,7 +252,51 @@ class Middleware:
                 )
             )
             raise Exceptions.UnexpectedBackend
-        
+
+    def _bootstrap_backend_m(self) -> None:
+        # Create backend
+        self.backend_m = BackendM(
+            log_directory=self._directory,
+            log_level=self._level,
+            write_interval=self._write_interval,
+            debug_log_length=self._debug_log_length
+        )
+        # Change internal log methods
+        self.log = self._log_backend_m
+        # Change backend flag
+        self._set_current_backend("MAIN")
+        # Announce it is done
+        self.log(
+            LogEntry(
+                LogLevelsE.INFO.name,
+                "Create log backend in main process complete"
+            )
+        )
+
+    def _bootstrap_backend_s(self) -> None:
+        # Create the backend
+        self.backend_s = BackendS(
+            log_directory=self._directory,
+            log_level=self._level,
+            log_queue=self.queue,
+            isFinish=self.isFinish,
+            write_interval=self._write_interval,
+            debug_log_length=self._debug_log_length,
+        )
+        # Change internal log methods
+        self.log = self._log_backend_s
+        # Start multiprocessing
+        self.backend_s.start()
+        # Change backend flag
+        self._set_current_backend("SEPARATE")
+        # Announce it is done
+        self.log(
+            LogEntry(
+                LogLevelsE.INFO.name,
+                "Creating backend in separate process complete"
+            )
+        )
+
     @classmethod
     def _print(cls, log: LogEntry) -> None:
         print(log, end="")
