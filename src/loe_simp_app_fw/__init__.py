@@ -29,4 +29,4 @@ __all__ = [
     "RetryCounter",
     ]
 
-__version__ = "2.6.15"
+__version__ = "2.7.0"
