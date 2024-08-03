@@ -1,5 +1,5 @@
 from multiprocessing import Event, JoinableQueue
-from typing import Callable, List
+from typing import Callable
 from multiprocessing.synchronize import Event as EventType
 
 from .backend_m import Backend as BackendM
@@ -9,7 +9,6 @@ from .model import Backend, Exceptions, LogEntry, LogLevelsE, ResourceLocator, L
 class Middleware:
     __slots__ = [
         "log", 
-        "logs", 
         "_current_backend", 
         "queue", 
         "isFinish", 
@@ -28,9 +27,8 @@ class Middleware:
         *args,
         **kwargs,
         ) -> None:
-        self.log: Callable[[LogEntry], None] = self._log_list
+        self.log: Callable[[LogEntry], None] = self._log_none
 
-        self.logs: List[LogEntry] = []
         self.backend_m: BackendM
         self.backend_s: BackendS
         self._current_backend: Backend = "NONE"
@@ -47,10 +45,8 @@ class Middleware:
 
     # ---------------------------- INTERNAL LOG METHODS ------------------------------
 
-    def _log_list(self, log: LogEntry) -> None:
-        self.logs.append(log)
+    def _log_none(self, log: LogEntry) -> None:
         self.queue.put(log)
-        self._print(log)
         return
 
     def _log_backend_m(self, log: LogEntry) -> None:
@@ -60,6 +56,7 @@ class Middleware:
     def _log_backend_s(self, log: LogEntry) -> None:
         self.queue.put(log)
         return
+
     # ---------------------------- API METHODS ------------------------------
 
     def setup(
@@ -87,35 +84,52 @@ class Middleware:
         self._debug_log_length = debug_log_length
         self._isMultiprocessing = _isMultiprocessing
 
-        try:
-            self._judge_backend("NONE")
-        except Exceptions.UnexpectedBackend:
-            self.log(
-                LogEntry(
-                    LogLevelsE.ERROR.name,
-                    f"Current backend, {self._current_backend}, is not expected"
-                )
-            )
-            raise
-        else:
+        self._judge_backend("NONE")
+        if _isMultiprocessing:
             self._switch_none_to_backend_s()
+        else:
+            self._switch_none_to_backend_m()
         self._isSetUp = True
 
     def shutdown(self) -> None:
-        # Shutdown sequence: 
-        #   Separate backend, main backend, none
+        # Sanity check
+        if self._isMultiprocessing:
+            try:
+                self._judge_backend("SEPARATE")
+            except Exceptions.UnexpectedBackend:
+                self.log(
+                    LogEntry(
+                        LogLevelsE.WARNING.name,
+                        "No backend in separate process found for a multiprocessing logger"
+                    )
+                )
+        else:
+            try:
+                self._judge_backend("MAIN")
+            except Exceptions.UnexpectedBackend:
+                self.log(
+                    LogEntry(
+                        LogLevelsE.WARNING.name,
+                        "No backend in main process found"
+                    )
+                )
 
-        try:
-            self._judge_backend("SEPARATE")
-        except Exceptions.UnexpectedBackend:
+        # Early shutdown
+        if self._current_backend == "NONE":
             self.log(
                 LogEntry(
                     LogLevelsE.WARNING.name,
-                    "No backend in separate process found"
+                    "Logger is never setup properly, backend is NONE"
                 )
             )
-            raise
-        else:
+            # Dumping log into stdout
+            while not self.queue.empty():
+                self._print(self.queue.get_nowait())
+                self.queue.task_done()
+            return
+        
+        # Shutdown sequence
+        if self._current_backend == "SEPARATE":
             self._switch_backend_s_to_backend_m()
             if self.backend_s.is_alive():
                 self.log(
@@ -124,18 +138,7 @@ class Middleware:
                         "Backend in separate process is still alive"
                     )
                 )
-
-        try:
-            self._judge_backend("MAIN")
-        except Exceptions.UnexpectedBackend:
-            self.log(
-                LogEntry(
-                    LogLevelsE.WARNING.name,
-                    "No backend in main process found"
-                )
-            )
-            raise
-        else:
+        if self._current_backend == "MAIN":       
             self._switch_backend_m_to_none()
             self.log(
                 LogEntry(
@@ -154,10 +157,8 @@ class Middleware:
         """
         # Bootstrap backend M
         self._bootstrap_backend_m()
-        # Move log to backend
-        [self.log(old_log) for old_log in self.logs]
-        # Clean up logs
-        self.logs = []
+        # Move cached log to backend
+        self._clean_up_queue()
 
     def _switch_none_to_backend_s(
         self,
@@ -168,16 +169,6 @@ class Middleware:
         # Bootstrap backend S
         self._bootstrap_backend_s()
 
-        # Clean instance logs
-        self.logs = []
-
-        self.log(
-            LogEntry(
-                LogLevelsE.INFO.name,
-                "Clean up instance logs that is in temporary list complete"
-            )
-        )
-
     # ---------------------------- STOP METHODS ------------------------------
 
     def _switch_backend_s_to_backend_m(
@@ -187,8 +178,7 @@ class Middleware:
         Prepare to terminate the multiprocessing middleware
         """
         # Stop the old backend
-        self.isFinish.set()
-        self.backend_s.join()
+        BackendS.shutdown(self.isFinish, self.backend_s)
 
         self.log(
             LogEntry(
@@ -199,12 +189,6 @@ class Middleware:
 
         # Bootstrap backend M
         self._bootstrap_backend_m()
-        
-        # Deal with items left in queue
-        if self.logs:
-            print("Logs is not empty during switch, something terribly wrong happened")
-            raise Exceptions.QueueCorruption
-
         self.log(
             LogEntry(
                 LogLevelsE.INFO.name,
@@ -212,9 +196,8 @@ class Middleware:
             )
         )
 
-        while not self.queue.empty():
-            self.log(self.queue.get_nowait())
-            self.queue.task_done()
+        # Move to main backend
+        self._clean_up_queue()
 
         self.log(
             LogEntry(
@@ -222,14 +205,12 @@ class Middleware:
                 f"Clean up queue complete, testing if queue is now empty, {self.queue.empty()}"
             )
         )
-        
-        self.queue.join()
-
+    
     def _switch_backend_m_to_none(self) -> None:
         # Close up backend in main process
         self.backend_m.finish()
         # Set log method
-        self.log = self._log_list
+        self.log = self._log_none
         self._set_current_backend("NONE")
 
     # ---------------------------- HELP METHODS ------------------------------
@@ -248,7 +229,7 @@ class Middleware:
             self.log(
                 LogEntry(
                     LogLevelsE.ERROR.name,
-                    f"Invalid switching backend, current backend {self._current_backend}, expecting {expected}"
+                    f"Invalid backend, current backend {self._current_backend}, expecting {expected}"
                 )
             )
             raise Exceptions.UnexpectedBackend
@@ -296,6 +277,18 @@ class Middleware:
                 "Creating backend in separate process complete"
             )
         )
+
+    def _clean_up_queue(self) -> None:
+        """
+        This will DEADLOCK if the log method is putting log into queue,
+        This method should only be called when the backend is MAIN
+        """
+        # Make sure it would not deadlock
+        self._judge_backend("MAIN")
+        # Move queue into logger
+        while not self.queue.empty():
+            self.log(self.queue.get_nowait())
+            self.queue.task_done()
 
     @classmethod
     def _print(cls, log: LogEntry) -> None:
