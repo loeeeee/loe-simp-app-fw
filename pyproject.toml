@@ -1,10 +1,9 @@
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "loe_simp_app_fw"
-version = "2.6.14"
 authors = [
   { name="loeeeee", email="95266635+loeeeee@users.noreply.github.com" },
 ]
@@ -20,6 +19,8 @@ dependencies = [
   "pyyaml",
   "requests"
 ]
+keywords = ["framework", "logger", "config mangager"]
+dynamic = ["version"]
 
 [project.urls]
 Homepage = "https://github.com/loeeeee/loe-simp-app-fw"
@@ -29,3 +30,6 @@ Issues = "https://github.com/loeeeee/loe-simp-app-fw/issues"
 exclude = [
   "/src/tests",
 ]
+
+[tool.setuptools.dynamic]
+version = {attr = "loe_simp_app_fw.__version__"}

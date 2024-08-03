@@ -28,3 +28,5 @@ __all__ = [
     "RequestError",
     "RetryCounter",
     ]
+
+__version__ = "2.6.15"
