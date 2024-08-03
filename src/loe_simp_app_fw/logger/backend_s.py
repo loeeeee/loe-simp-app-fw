@@ -74,3 +74,11 @@ class Backend(BackendHelper, mp.Process):
         self._write_normal_log(noInterval=True)
         self.normal_file_handler.close()
         self._write_debug_log()
+
+    @staticmethod
+    def shutdown(finish_flag: EventType, backend: "Backend") -> None:
+        # Set stop flag
+        finish_flag.set()
+        # Wait for join
+        backend.join()
+        return
