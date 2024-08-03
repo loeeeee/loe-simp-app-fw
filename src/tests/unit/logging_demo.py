@@ -12,7 +12,16 @@ def main() -> None:
     Logger.bootstrap("./log")
     print("Finish Bootstrap")
     logging()
-    print("Finish main")
+    print("Finish logging")
+    Logger._debootstrap()
+    print("Stopped")
+
+    # -----------------------------------------------------
+    logging()
+    print("Force single process logger")
+    Logger.bootstrap("./log", isMultiprocessing=False)
+    logging()
+    print("Finish logging")
 
 if __name__ == "__main__":
     main()

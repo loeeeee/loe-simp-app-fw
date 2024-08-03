@@ -15,6 +15,7 @@ class Logger:
         *args,
         log_level: LogLevels = LogLevelsE.INFO.name, 
         print_all: bool = False,
+        isMultiprocessing: bool = True,
         **kwargs,
         ) -> None:
         """
@@ -35,6 +36,7 @@ class Logger:
         cls._middleware.setup(
             log_directory=log_folder_path,
             log_level=log_level,
+            isMultiprocessing=isMultiprocessing,
         )
 
         cls._middleware.log(LogEntry(LogLevelsE.INFO.name, "Logger frontend init successfully"))
@@ -58,6 +60,19 @@ class Logger:
     @classmethod
     def _logging(cls, log_entry: LogEntry) -> None:
         cls._middleware.log(log_entry)
+
+    @classmethod
+    def _debootstrap(cls) -> None:
+        """
+        This function is mainly for testing
+        """
+        # Shutdown old middleware
+        cls._middleware.shutdown()
+        # Create new one
+        cls._middleware = Middleware()
+        # Reset settings
+        cls._isInit = False
+        cls._isPrintAll = False
 
     @classmethod
     def set_log_level(cls, log_level: LogLevels) -> None:

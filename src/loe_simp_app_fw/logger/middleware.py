@@ -66,7 +66,7 @@ class Middleware:
         *args, 
         write_interval: float = 5.0, 
         debug_log_length: int = 5000,
-        _isMultiprocessing: bool = True, 
+        isMultiprocessing: bool = True, 
         **kwargs
         ) -> None:
         if self._isSetUp:
@@ -82,10 +82,10 @@ class Middleware:
         self._level = log_level
         self._write_interval = write_interval
         self._debug_log_length = debug_log_length
-        self._isMultiprocessing = _isMultiprocessing
+        self._isMultiprocessing = isMultiprocessing
 
         self._judge_backend("NONE")
-        if _isMultiprocessing:
+        if isMultiprocessing:
             self._switch_none_to_backend_s()
         else:
             self._switch_none_to_backend_m()
