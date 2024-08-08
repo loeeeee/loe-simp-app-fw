@@ -5,6 +5,7 @@ from .csvnia import CSVReader, CSVWriter
 from .notebook import isNotebook
 from .start import main as init_repo
 from .request_handler import RequestError, RequestHandler, RetryCounter
+from .prometheus import prometheus
 from .exit import Register
 
 # Register exit sequence in order
@@ -27,6 +28,7 @@ __all__ = [
     "RequestHandler",
     "RequestError",
     "RetryCounter",
+    "prometheus",
     ]
 
 __version__ = "2.7.5"

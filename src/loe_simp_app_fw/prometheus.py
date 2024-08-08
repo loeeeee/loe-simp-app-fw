@@ -31,7 +31,7 @@ class Prometheus:
         self.event_counter[event] = _Counter(counter[0], counter[1] + 1)
         return
 
-    def summary(self) -> None:
+    def _summary(self) -> None:
         transformed_data: List[Tuple[Event, int, int, float]] = [
             (event, sum(counter), counter[1], counter[0]/sum(counter) * 100) for event, counter in self.event_counter.items()
             ]
@@ -47,3 +47,5 @@ class Prometheus:
         for line in summary.split("\n"):
             Logger.info(line)
         return
+
+prometheus: Prometheus = Prometheus()
