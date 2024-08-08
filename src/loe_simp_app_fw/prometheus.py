@@ -1,6 +1,7 @@
 from typing import Dict, NamedTuple, TypeAlias, List, Tuple
 from tabulate import tabulate
-from logger import Logger
+
+from .logger import Logger
 
 class _Counter(NamedTuple):
     success: int
