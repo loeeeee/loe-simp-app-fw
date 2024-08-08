@@ -1,10 +1,10 @@
 import atexit
 import sys
-import signal
 from typing import ClassVar
 
 from .cacher import GlobalCacheManager
 from .logger import Logger
+from .prometheus import prometheus
 
 
 class Register:
@@ -20,6 +20,7 @@ class Register:
         atexit.register(cls.save_to_disk)
         Logger.debug("Registering write_log_buffer to execute at exit")
         atexit.register(cls.write_log_buffer)
+        atexit.register(cls.write_monitoring_result)
 
         cls.isRegistered = True
         Logger.debug(f"isRegister is set to {cls.isRegistered}")
@@ -32,6 +33,11 @@ class Register:
             GlobalCacheManager._suspend()
         else:
             Logger.warning("Cacher is never setup")
+
+    @staticmethod
+    def write_monitoring_result():
+        prometheus._summary()
+        return
 
     @staticmethod
     def write_log_buffer():
