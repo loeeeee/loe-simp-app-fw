@@ -22,7 +22,7 @@ class Prometheus:
         self.event_counter[event] = _Counter(counter[0] + 1, counter[1])
         return
 
-    def fail(self, event: Event) -> None:
+    def failure(self, event: Event) -> None:
         if event in self.event_counter:
             counter = self.event_counter[event]
         else:
