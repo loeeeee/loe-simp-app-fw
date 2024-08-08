@@ -4,7 +4,7 @@ from typing import ClassVar
 
 from .cacher import GlobalCacheManager
 from .logger import Logger
-from .prometheus import prometheus
+from .prometheus import Prometheus
 
 
 class Register:
@@ -36,7 +36,7 @@ class Register:
 
     @staticmethod
     def write_monitoring_result():
-        prometheus._summary()
+        Prometheus.summary()
         return
 
     @staticmethod

@@ -1,4 +1,4 @@
-from typing import Dict, NamedTuple, TypeAlias, List, Tuple
+from typing import ClassVar, Dict, NamedTuple, TypeAlias, List, Tuple
 from tabulate import tabulate
 
 from .logger import Logger
@@ -9,27 +9,35 @@ class _Counter(NamedTuple):
 
 Event: TypeAlias = str
 
-class Prometheus:
-    def __init__(self) -> None:
+
+class PrometheusWorker:
+    def __init__(self, name: str, *args, **kwargs) -> None:
+        self.name: str = name
         self.event_counter: Dict[Event, NamedTuple] = {}
         pass
 
-    def success(self, event: Event) -> None:
+    def success(self, event: Event, *args, msg: str = "", **kwargs) -> None:
         if event in self.event_counter:
             counter = self.event_counter[event]
         else:
             counter = _Counter(0, 0)
     
         self.event_counter[event] = _Counter(counter[0] + 1, counter[1])
+
+        if msg:
+            Logger.debug(msg)
         return
 
-    def failure(self, event: Event) -> None:
+    def failure(self, event: Event, *args, msg: str = "", **kwargs) -> None:
         if event in self.event_counter:
             counter = self.event_counter[event]
         else:
             counter = _Counter(0, 0)
     
         self.event_counter[event] = _Counter(counter[0], counter[1] + 1)
+
+        if msg:
+            Logger.error(msg)
         return
 
     def _summary(self) -> None:
@@ -40,13 +48,27 @@ class Prometheus:
         summary: str = tabulate(
             transformed_data,
             headers=header,
-            intfmt=",",
+            # intfmt=",",
             floatfmt=".2f",
-            tablefmt="grid"
+            tablefmt="grid",
         )
-        Logger.info("Prometheus monitoring result:")
+        Logger.info(f"PrometheusWorker {self.name} monitoring result:")
         for line in summary.split("\n"):
             Logger.info(line)
         return
 
-prometheus: Prometheus = Prometheus()
+
+class Prometheus:
+    workers: ClassVar[List[PrometheusWorker]] = []
+
+    @classmethod
+    def get(cls, name: str) -> PrometheusWorker:
+        worker = PrometheusWorker(name)
+        cls.workers.append(worker)
+        return worker
+
+    @classmethod
+    def summary(cls) -> None:
+        for worker in cls.workers:
+            worker._summary()
+
