@@ -1,4 +1,5 @@
 from ...loe_simp_app_fw import Logger
+import time
 
 def logging() -> None:
     Logger.debug("This is a debug message")
@@ -12,6 +13,7 @@ def main() -> None:
     Logger.bootstrap("./log")
     print("Finish Bootstrap")
     logging()
+    time.sleep(5)
     print("Finish logging")
     Logger._debootstrap()
     print("Stopped")

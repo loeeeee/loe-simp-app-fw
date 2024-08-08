@@ -20,8 +20,6 @@ class Register:
         atexit.register(cls.save_to_disk)
         Logger.debug("Registering write_log_buffer to execute at exit")
         atexit.register(cls.write_log_buffer)
-        Logger.debug("Registering signal handler for CTRL+C")
-        signal.signal(signal.SIGINT, cls.signal_handler_sigint)
 
         cls.isRegistered = True
         Logger.debug(f"isRegister is set to {cls.isRegistered}")

@@ -47,16 +47,25 @@ class Backend(BackendHelper, mp.Process):
         self.normal_file_handler: TextIOWrapper = self._create_normal_file_handler()
         
         # Begin main loop
-        while not self.finish_flag.is_set() or not self.queue.empty():
-            self._main()
-        
+        try:
+            while not self.finish_flag.is_set() or not self.queue.empty():
+                self._main(inAHarry=False)
+                break
+        except KeyboardInterrupt:
+            self.logs.append(
+                LogEntry(
+                    LogLevelsE.INFO.name,
+                    "Keyboard interrupt received exiting backend"
+                )
+            )
+
         # Clean up and exit
         self._finish()
         return
 
-    def _main(self) -> None:
+    def _main(self, inAHarry: bool = False) -> None:
         try:
-            log = self.queue.get(timeout=self._write_interval)
+            log = self.queue.get(block=not inAHarry, timeout=self._write_interval)
         except (mp.TimeoutError, Empty):
             self.logs.append(
                 LogEntry(
@@ -68,9 +77,12 @@ class Backend(BackendHelper, mp.Process):
             self.logs.append(log)
             self.queue.task_done()
 
-            self._write_normal_log() # This also trims log history to debug log length limit
+            self._write_normal_log(noInterval=inAHarry) # This also trims log history to debug log length limit
 
     def _finish(self) -> None:
+        while not self.queue.empty():
+            self._main(inAHarry=True)
+            
         self._write_normal_log(noInterval=True)
         self.normal_file_handler.close()
         self._write_debug_log()
