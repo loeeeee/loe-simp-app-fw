@@ -50,7 +50,6 @@ class Backend(BackendHelper, mp.Process):
         try:
             while not self.finish_flag.is_set() or not self.queue.empty():
                 self._main(inAHarry=False)
-                break
         except KeyboardInterrupt:
             self.logs.append(
                 LogEntry(

@@ -92,7 +92,7 @@ class BackendHelper:
             self.normal_file_handler.writelines(to_write)
             self.last_write_time = now
             self.logs.append(
-                LogEntry(LogLevelsE.DEBUG.name, "One timed write happens")
+                LogEntry(LogLevelsE.DEBUG.name, f"One timed write happens after {now - self.last_write_time}s")
             )
         return
 
