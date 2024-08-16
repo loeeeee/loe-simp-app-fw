@@ -1,4 +1,4 @@
-from .logger import Logger
+from .logger import Logger, LogEntry
 from .config import BaseConfig, FrameworkConfig, NotInitialized
 from .cacher import CacheCorrupt, CacheExpired, CacheMiss, CacheNotFound, GlobalCacheManager
 from .csvnia import CSVReader, CSVWriter
@@ -13,6 +13,7 @@ Register.register()
 
 __all__ = [
     "Logger", 
+    "LogEntry",
     "CacheCorrupt",
     "CacheExpired",
     "CacheMiss",
