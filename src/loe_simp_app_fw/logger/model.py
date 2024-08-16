@@ -67,6 +67,7 @@ class BackendHelper:
         *args,
         write_interval: float = 5.0,
         debug_log_length: int = 5000,
+        error_log_length: int = 150,
         noFileHandler: bool = False,
         **kwargs,
         ) -> None:
@@ -76,6 +77,7 @@ class BackendHelper:
         self._date: datetime.date = datetime.date.today()
         self._write_interval: float = write_interval
         self._debug_log_length: int = debug_log_length
+        self._error_log_length: int = error_log_length
 
         # Internal variables
         self.logs: List[LogEntry] = []
@@ -104,16 +106,38 @@ class BackendHelper:
             )
 
     def _get_unconsumed_normal_log(self) -> List[str]:
+        """
+        Returns a list of log content, if the log level is error, it will add additional debug preceding debug logs
+
+        Returns:
+            List[str]: List of string that is ready to be output to file
+        """
         # Write important ones normally
         to_write: List[str] = []
-        for history_log in self.logs:
-            if not history_log.consumed and getattr(LogLevelsE, history_log.level).value >= self._level:
+        error_log_countdown: int = 0
+        for history_log in reversed(self.logs):
+            if history_log.consumed:
+                # Skip consumed logs
+                continue
+
+            if getattr(LogLevelsE, history_log.level) == LogLevelsE.ERROR:
+                # Reset counter
+                error_log_countdown = self._error_log_length
+
+            if getattr(LogLevelsE, history_log.level).value >= self._level \
+                or error_log_countdown > 0:
+                # Add to to write
                 history_log.consumed = True
                 to_write.append(str(history_log))
 
+                # Count
+                error_log_countdown -= 1
+
         # Now it is safe to trim log history
         self.logs = self.logs[-self._debug_log_length:]
-        return to_write
+        
+        # Reorder to write temporally
+        return list(reversed(to_write))
             
     def _update_normal_file_handler(self) -> None:
         # For persistent operations
@@ -139,7 +163,7 @@ class BackendHelper:
 
     def _create_debug_file_handler(self) -> TextIOWrapper:
         return open(
-            os.path.join(self._directory, f"debug.log"),
+            os.path.join(self._directory, f"trailing.log"),
             "w", 
             encoding="utf-8", 
             )
