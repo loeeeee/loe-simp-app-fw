@@ -1,7 +1,9 @@
-from typing import ClassVar, Dict, NamedTuple, TypeAlias, List, Tuple
+from typing import ClassVar, Dict, Literal, NamedTuple, TypeAlias, List, Tuple
+import functools
+
 from tabulate import tabulate
 
-from .logger import Logger
+from .logger import Logger, LogEntry
 
 class _Counter(NamedTuple):
     success: int
@@ -14,9 +16,8 @@ class PrometheusWorker:
     def __init__(self, name: str, *args, **kwargs) -> None:
         self.name: str = name
         self.event_counter: Dict[Event, NamedTuple] = {}
-        pass
 
-    def success(self, event: Event, *args, msg: str = "", **kwargs) -> None:
+    def success(self, event: Event, *args, msg: str|LogEntry = "", **kwargs) -> None:
         if event in self.event_counter:
             counter = self.event_counter[event]
         else:
@@ -25,10 +26,10 @@ class PrometheusWorker:
         self.event_counter[event] = _Counter(counter[0] + 1, counter[1])
 
         if msg:
-            Logger.debug(msg)
+            self._log(msg, "success")
         return
 
-    def failure(self, event: Event, *args, msg: str = "", **kwargs) -> None:
+    def failure(self, event: Event, *args, msg: str|LogEntry = "", **kwargs) -> None:
         if event in self.event_counter:
             counter = self.event_counter[event]
         else:
@@ -37,7 +38,7 @@ class PrometheusWorker:
         self.event_counter[event] = _Counter(counter[0], counter[1] + 1)
 
         if msg:
-            Logger.error(msg)
+            self._log(msg, "failure")
         return
 
     def _summary(self) -> None:
@@ -56,6 +57,22 @@ class PrometheusWorker:
         for line in summary.split("\n"):
             Logger.info(line)
         return
+
+    @functools.singledispatchmethod
+    def _log(self, msg, success_or_failure) -> None:
+        Logger.error(f"Unknown type of message, {type(msg)}")
+        raise TypeError
+    
+    @_log.register
+    def _(self, msg: str, success_or_failure: Literal["success", "failure"]) -> None:
+        if success_or_failure == "success":
+            Logger.debug(msg)
+        elif success_or_failure == "failure":
+            Logger.error(msg)
+
+    @_log.register
+    def _(self, msg: LogEntry, success_or_failure: Literal["success", "failure"]) -> None:
+        Logger._logging(msg)
 
 
 class Prometheus:
