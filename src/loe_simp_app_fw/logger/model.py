@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 import datetime
 import os
 import time
+import sys
 
 LogLevels: TypeAlias = Literal["DEBUG", "INFO", "WARNING", "ERROR"]
 
@@ -84,6 +85,8 @@ class BackendHelper:
         self.last_write_time: float = time.time()
         if not noFileHandler:
             self.normal_file_handler: TextIOWrapper = self._create_normal_file_handler()
+        else:
+            raise NotImplemented
 
     def _write_normal_log(self, noInterval: bool = False) -> None:
         # Judge if the interval is reached
@@ -143,17 +146,21 @@ class BackendHelper:
         # For persistent operations
         today = datetime.date.today()
         if today != self._date:
+            self._date = today
             self.normal_file_handler = self._create_normal_file_handler()
             self.logs.append(LogEntry(LogLevelsE.INFO.name, "Update log file handler successful"))
-            self._date = today
     
     def _create_normal_file_handler(self) -> TextIOWrapper:
-        log_file_location: str = os.path.join(self._directory, f"{datetime.date.today()}.log")
+        log_file_location: str = os.path.join(self._directory, f"{self._date}.log")
         if not os.path.isfile(log_file_location) and not os.path.isdir(log_file_location):
             with open(log_file_location, "w", encoding="utf-8"):
                 self.logs.append(
                     LogEntry(LogLevelsE.INFO.name, "Log file created successfully.")
                 )
+        else:
+            self.logs.append(
+                LogEntry(LogLevelsE.INFO.name, "Log file exists or log file is not file, skip creation")
+            )
         return open(
             log_file_location,
             "a", 
