@@ -52,7 +52,7 @@ class GlobalCacheManager:
     _meta_file_name: str = "meta.json"
 
     @classmethod
-    def setup(cls, cache_folder: AbsolutePath, days_to_expire: int, neverExpire: bool = False, readOnly: bool = False, disable: bool = False) -> None:
+    def setup(cls, cache_folder: AbsolutePath, days_to_expire: int, *args, neverExpire: bool = False, readOnly: bool = False, disable: bool = False, **kwargs) -> None:
         # Store settings
         cls._cache_folder = cache_folder
         cls._days_to_expire = timedelta(days=days_to_expire)
@@ -70,7 +70,7 @@ class GlobalCacheManager:
         cls._isSetup = True
 
     @classmethod
-    def get(cls, identifier: Identifier) -> Optional[str]:
+    def get(cls, identifier: Identifier, *args, **kwargs) -> Optional[str]:
         if cls._disable:
             return
 
@@ -88,7 +88,7 @@ class GlobalCacheManager:
             return cached
 
     @classmethod
-    def save(cls, content: str, identifier: Identifier, extension_name: str) -> None:
+    def save(cls, content: str, identifier: Identifier, extension_name: str, *args, **kwargs) -> None:
         if cls._readOnly or cls._disable:
             return
         else:
