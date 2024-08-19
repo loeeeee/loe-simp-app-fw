@@ -51,8 +51,19 @@ class GlobalCacheManager:
     # Constant
     _meta_file_name: str = "meta.json"
 
+    # -------------------------------- API --------------------------------
+
     @classmethod
-    def setup(cls, cache_folder: AbsolutePath, days_to_expire: int, *args, neverExpire: bool = False, readOnly: bool = False, disable: bool = False, **kwargs) -> None:
+    def setup(
+        cls, 
+        cache_folder: AbsolutePath, 
+        days_to_expire: int, 
+        *args, 
+        neverExpire: bool = False, 
+        readOnly: bool = False, 
+        disable: bool = False, 
+        **kwargs
+        ) -> None:
         # Store settings
         cls._cache_folder = cache_folder
         cls._days_to_expire = timedelta(days=days_to_expire)
@@ -98,6 +109,25 @@ class GlobalCacheManager:
                 extension=extension_name
                 )
         return
+
+    @staticmethod
+    def generate_hash(source: Identifier) -> HashKey:
+        """Generate primary key using a given string
+
+        Args:
+            source (str): a string would not be changed during different scraping
+
+        Returns:
+            str: a 48-digit hexdigest string
+        """ 
+        # Create a hash object
+        hash_obj = hashlib.blake2b(digest_size=8)
+        # Update the hash object with the source bytes
+        hash_obj.update(source.encode('utf-8'))
+        # Return the hexadecimal digest of the hash
+        return hash_obj.hexdigest()
+
+    # -------------------------------- Internal Methods --------------------------------
 
     @classmethod
     def _get_unhandled(cls, identifier: Identifier) -> str:
@@ -185,20 +215,3 @@ class GlobalCacheManager:
             json.dump(dumpable, f, ensure_ascii=False, indent=2)
         Logger.debug(f"Save cache map to {file_path}")
         return
-
-    @staticmethod
-    def generate_hash(source: Identifier) -> HashKey:
-        """Generate primary key using a given string
-
-        Args:
-            source (str): a string would not be changed during different scraping
-
-        Returns:
-            str: a 48-digit hexdigest string
-        """ 
-        # Create a hash object
-        hash_obj = hashlib.blake2b(digest_size=8)
-        # Update the hash object with the source bytes
-        hash_obj.update(source.encode('utf-8'))
-        # Return the hexadecimal digest of the hash
-        return hash_obj.hexdigest()
