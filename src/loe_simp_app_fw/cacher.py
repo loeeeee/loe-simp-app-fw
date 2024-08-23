@@ -1,9 +1,10 @@
 from typing import ClassVar, Dict, Optional, Tuple, TypeAlias
 from datetime import date, timedelta
-from .logger import Logger
 import hashlib
 import os
 import json
+
+from .logger import Logger
 
 # Typings
 AbsolutePath: TypeAlias = str
@@ -99,14 +100,24 @@ class GlobalCacheManager:
             return cached
 
     @classmethod
-    def save(cls, content: str, identifier: Identifier, extension_name: str, *args, **kwargs) -> None:
+    def save(
+        cls, 
+        content: str, 
+        identifier: Identifier, 
+        extension_name: str, 
+        *args, 
+        ttl_overwrite: Optional[int] = None, 
+        **kwargs
+        ) -> None:
+    
         if cls._readOnly or cls._disable:
             return
         else:
             cls._save_unhandled(
                 identifier=identifier,
                 to_be_cached=content,
-                extension=extension_name
+                extension=extension_name,
+                time_to_live=ttl_overwrite
                 )
         return
 
@@ -169,7 +180,7 @@ class GlobalCacheManager:
         return content
 
     @classmethod
-    def _save_unhandled(cls, identifier: Identifier, to_be_cached: str, extension: str) -> None:
+    def _save_unhandled(cls, identifier: Identifier, to_be_cached: str, extension: str, time_to_live: Optional[int]) -> None:
         Logger.debug("Save to cache system.")
         hash_key = cls.generate_hash(identifier)
         file_name = f"{hash_key}{extension}"
