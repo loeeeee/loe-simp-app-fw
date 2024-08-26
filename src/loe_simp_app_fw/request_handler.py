@@ -6,7 +6,7 @@ import mimetypes
 
 import requests
 
-from .cacher import GlobalCacheManager
+from .cacher import CacheMap, Cached
 from .logger import Logger
 
 
@@ -63,7 +63,7 @@ class RequestHandler:
     retrieve_interval: ClassVar[Tuple[float, float]] = (5,1) # Mu, Sigma
 
     # Caching system
-    _cacher: ClassVar[GlobalCacheManager] = GlobalCacheManager()
+    _cacher: ClassVar[CacheMap] = CacheMap()
 
     _last_request_time: ClassVar[float] = time.time()
 
@@ -129,7 +129,7 @@ class RequestHandler:
         return response
 
     @classmethod
-    def get(cls, URL: str, ignoreCache: bool = False, file_extension_hint: str = "html") -> str:
+    def get(cls, URL: str, ignoreCache: bool = False, file_extension_hint: str = "html", cache_time_to_live: Optional[int] = None) -> str:
         """Main API, get some URL
 
         Args:
@@ -142,9 +142,13 @@ class RequestHandler:
             str: the result of the GET in a string format
         """
         # --------------- Cache System ----------------------
-        if (result := cls._cacher.get(URL)) and not ignoreCache:
-            return result
-        Logger.debug("Cache miss")
+        if (result := cls._cacher[URL]) and not ignoreCache:
+            if not result.isExpired:
+                return result.content
+            else:
+                Logger.debug(f"Cache miss due to cache expire")
+        else:
+            Logger.debug("Cache miss")
         # --------------- Cache System ----------------------
 
         # Handle retry
@@ -166,8 +170,14 @@ class RequestHandler:
 
                 # --------------- Cache System ----------------------
                 extension_name = cls.extension_gusser(URL, response, default=file_extension_hint)
-                Logger.debug(f"Best ext: {extension_name}")
-                cls._cacher.save(response.text, URL, extension_name)
+                Logger.debug(f"Best extension: {extension_name}")
+                cache = Cached(
+                    identifier = URL,
+                    content = response.text,
+                    time_to_live = cache_time_to_live,
+                    file_extension = extension_name,
+                )
+                cls._cacher.append(cache)
                 # --------------- Cache System ----------------------
 
                 return response.text

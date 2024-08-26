@@ -1,9 +1,8 @@
 import atexit
-import sys
 from typing import ClassVar
 
-from .cacher import GlobalCacheManager
 from .logger import Logger
+from .cacher import CacheMap
 from .prometheus import Prometheus
 
 
@@ -16,10 +15,11 @@ class Register:
         if cls.isRegistered:
             Logger.warning("Trying to register the exit function multiple times")
             return
-        Logger.debug("Registering save_to_disk to execute at exit")
-        atexit.register(cls.save_to_disk)
         Logger.debug("Registering write_log_buffer to execute at exit")
         atexit.register(cls.write_log_buffer)
+        Logger.debug("Registering save_to_disk to execute at exit")
+        atexit.register(cls.save_cache_to_disk)
+        Logger.debug("Registering write_monitoring_result to execute at exit")
         atexit.register(cls.write_monitoring_result)
 
         cls.isRegistered = True
@@ -27,12 +27,10 @@ class Register:
         return
 
     @staticmethod
-    def save_to_disk():
-        Logger.debug("Cacher detects exit")
-        if GlobalCacheManager._isSetup:
-            GlobalCacheManager._suspend()
-        else:
-            Logger.warning("Cacher is never setup")
+    def save_cache_to_disk():
+        Logger.debug("Save cache to disk")
+        CacheMap.save()
+        Logger.debug("Finished")
 
     @staticmethod
     def write_monitoring_result():
@@ -44,8 +42,4 @@ class Register:
         # Clean up logger buffer when crashing
         Logger.info("Prepare to shutdown logger in middleware")
         Logger._middleware.shutdown()
-
-    @staticmethod
-    def signal_handler_sigint(signal, frame) -> None:
-        Logger.info("SIGINT received in all process")
-        sys.exit() # This will run all the registered cleanup code
+    

@@ -1,16 +1,21 @@
-from ...loe_simp_app_fw import GlobalCacheManager, Logger
+from ...loe_simp_app_fw import CacheMap, Logger, Cached
 
 from random import random
 
 def main() -> None:
     Logger.bootstrap("./log")
 
-    gcm = GlobalCacheManager()
+    gcm = CacheMap()
     gcm.setup(
-        "./.cache",
-        days_to_expire=10000,
+        cache_folder=".cache",
+        time_to_live=7,
     )
-    gcm.save(random_bs(), "12345", ".txt")
+    cache = Cached(
+        identifier="12345",
+        content=random_bs(),
+        file_extension="txt"
+    )
+    gcm.append(cache)
     Logger.info("Finish saving")
     
 def random_bs() -> str:

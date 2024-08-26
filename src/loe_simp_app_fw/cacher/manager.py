@@ -1,17 +1,17 @@
-from typing import Optional, TypeAlias, ClassVar, Tuple, Dict
-from datetime import timedelta, date
+import datetime
+from typing import Dict, ClassVar
+import os
+import json
 
-from .model import Cached, HashKey, Identifier
+from .model import AbsolutePath, HashKey, CachedEntry, Cached, Identifier, generate_hash
+from .exception import CacheMiss
 from ..logger import Logger
 
-AbsolutePath: TypeAlias = str
-RelativePath: TypeAlias = str
 
-class CacheManager:
-
+class CacheMap:
     # Settings
-    _cache_folder: ClassVar[AbsolutePath]
-    _time_to_live: ClassVar[timedelta]
+    _cache_folder: ClassVar[AbsolutePath] = ""
+    _days_to_expire: ClassVar[datetime.timedelta]
 
     # Override
     _neverExpire: ClassVar[bool]
@@ -19,35 +19,17 @@ class CacheManager:
     _disable: ClassVar[bool]
 
     # Variables
-    _cache_map: ClassVar[Dict[HashKey, Tuple[date, RelativePath]]] = {}
+    _map: ClassVar[Dict[HashKey, CachedEntry|Cached]] = {}
     _isSetup: ClassVar[bool] = False
-
+    
     # Constant
-    _meta_file_name: str = "meta.json"
-
-    # ---------------------------- API ----------------------------
-
-    @classmethod
-    def get(cls, identifier: Identifier) -> Cached:
-        return
-
-    @classmethod
-    def save(
-        cls, 
-        identifier: Identifier, 
-        content: str, 
-        *args, 
-        extension_name: str = "txt", 
-        time_to_live: Optional[int] = None, 
-        **kwargs
-        ) -> None:
-        return
+    _meta_file_name: ClassVar[str] = "meta.json"
 
     @classmethod
     def setup(
         cls, 
         cache_folder: AbsolutePath, 
-        days_to_expire: int, 
+        time_to_live: int, 
         *args, 
         neverExpire: bool = False, 
         readOnly: bool = False, 
@@ -56,40 +38,107 @@ class CacheManager:
         ) -> None:
         # Store settings
         cls._cache_folder = cache_folder
-        cls._days_to_expire = timedelta(days=days_to_expire)
-        cls._neverExpire = neverExpire
-        cls._readOnly = readOnly
-        cls._disable = disable
-        ## Sanity check
-        if disable and (readOnly or neverExpire):
-            Logger.warning(f"Ignore cache and (read only, never expire) are incompatible parameters. Only ignore cache will be respected")
-        
-        # Setup Cacher
-        cls._resume()
+        cls._days_to_expire = datetime.timedelta(days=time_to_live)
+
+        # Setup Cached and CachedEntry
+        Cached.setup(
+            default_time_to_live=time_to_live,
+            cache_folder=cache_folder,
+        )
+        CachedEntry.setup(
+            default_time_to_live=time_to_live,
+            cache_folder=cache_folder
+        )
+
+        cls._neverExpire = neverExpire # NotImplement
+        cls._readOnly = readOnly    # NotImplement
+        cls._disable = disable  # NotImplement
 
         # Flag it
         cls._isSetup = True
 
-    # ---------------------------- Internal Methods ----------------------------
+    @classmethod
+    def append(cls, cached: Cached, /) -> None:
+
+        # Add downloaded content to cache storage
+        ## If an old one exists, check if content updates
+        ### If updates an old one, save the updated content
+        try:
+            old_cache = cls._map[cached._primary_key]
+        except KeyError:
+            # No old cache found
+            cls._map[cached._primary_key] = cached
+        else:
+            # Old cache found
+            if cached._content_hash != old_cache._content_hash:
+                # Update cache
+                cached._save()
+                cls._map[cached._primary_key] = cached
+            # Update birthday of the cached
+            cls._map[cached._primary_key]._reborn()
 
     @classmethod
-    def _resume(cls) -> None:
+    def __getitem__(cls, key: Identifier, /) -> Cached:
+        key = generate_hash(key)
+        try:
+            candidate: Cached|CachedEntry = cls._map[key]
+        except KeyError:
+            Logger.debug(f"Cannot find cache {key}")
+            raise CacheMiss
+        else:
+            if isinstance(candidate, Cached):
+                # It is already loaded
+                return candidate
+            else:
+                # It is not yet loaded
+                candidate = Cached._load_content(candidate)
+                cls._map[key] = candidate
+                return candidate
+
+    @classmethod
+    def __delitem__(cls, key: Identifier, /) -> None:
+        key = generate_hash(key)
+        del cls._map[key]
+
+    @classmethod
+    def __len__(cls) -> int:
+        return len(cls._map)
+
+    @classmethod
+    def evacuate_cached(cls) -> None:
+        """
+        Remove all the cached from the cache map and replace with only entry
+
+        Raises:
+            NotImplemented: It is not implemented though
+        """
+        raise NotImplemented
+
+    @classmethod
+    def load(cls) -> None:
+        meta_file_path: AbsolutePath = os.path.join(cls._cache_folder, cls._meta_file_name)
+        Logger.debug(f"Load meta file from {meta_file_path}")
+        with open(meta_file_path, "r", encoding="utf-8") as f:
+            composed_json = json.load(f)
+        
+        for entry in composed_json:
+            cls._map[entry["_primary_key"]] = CachedEntry.from_json(entry)
+
+        Logger.debug(f"Loaded cache meta from file")
         return
 
     @classmethod
-    def _suspend(cls) -> None:
+    def save(cls) -> None:
+        composed_json = []
+        for entry in cls._map.values():
+            composed_json.append(entry._to_json())
+
+        meta_file_path: AbsolutePath = os.path.join(cls._cache_folder, cls._meta_file_name)
+        with open(meta_file_path, "w", encoding="utf-8") as f:
+            json.dump(composed_json, f)
+        Logger.debug(f"Saved cache meta to file in {meta_file_path}")
         return
 
     @classmethod
-    def _get_unhandled(cls, identifier: Identifier) -> None:
-        return
-
-    @classmethod
-    def _save_unhandled(
-        cls,
-        identifier: Identifier, 
-        content: str, 
-        extension_name: str, 
-        time_to_live: Optional[int],
-        ) -> None:
+    def _upgrade_meta_to_new_schema(cls) -> None:
         return

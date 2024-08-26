@@ -1,11 +1,14 @@
 class CacheMiss(Exception):
     pass
 
-class CacheCorrupt(Exception):
+class CacheCorrupted(Exception):
     pass
 
 class CacheNotFound(Exception):
     pass
 
-class CacheExpired(Exception):
+class NotYetSetup(Exception):
+    pass
+
+class EmptyIdentifier(Exception):
     pass
