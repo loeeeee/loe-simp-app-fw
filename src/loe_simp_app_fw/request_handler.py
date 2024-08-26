@@ -6,7 +6,9 @@ import mimetypes
 
 import requests
 
-from .cacher import CacheManager, Cached
+from loe_simp_app_fw.cacher.exception import CacheCorrupted
+
+from .cacher import CacheManager, Cached, CacheMiss
 from .logger import Logger
 
 
@@ -142,17 +144,25 @@ class RequestHandler:
             str: the result of the GET in a string format
         """
         # --------------- Cache System ----------------------
-        if (result := cls._cacher[URL]) and not ignoreCache:
-            if not result.isExpired:
+        try:
+            result = cls._cacher[URL]
+        except CacheMiss:
+            Logger.info(f"Cache miss for {URL}")
+        except CacheCorrupted:
+            pass
+        else:
+            isCacheHit: bool = ignoreCache
+            
+            if result.isExpired:
+                Logger.debug(f"Cache miss due to cache expire")
+                isCacheHit = False
+
+            if isCacheHit:
                 if isFromOldSchema:
                     result.core.identifier = URL
                     Logger.info(f"Identifier is set to {URL}")
                     result.core._save()
                 return result.content
-            else:
-                Logger.debug(f"Cache miss due to cache expire")
-        else:
-            Logger.debug("Cache miss")
         # --------------- Cache System ----------------------
 
         # Handle retry

@@ -157,6 +157,7 @@ class _CachedCore:
                 raise CacheNotFound
             
             if content == "":
+                Logger.warning(f"Cache, {path}, corrupted")
                 raise CacheCorrupted
 
             # Save it to content
