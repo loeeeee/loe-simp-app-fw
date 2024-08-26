@@ -28,7 +28,7 @@ class Backend(BackendHelper, mp.Process):
             *args, 
             write_interval=write_interval, 
             debug_log_length=debug_log_length,
-            noFileHandler=True, 
+            noFileHandler=False, 
             **kwargs
             )
 
