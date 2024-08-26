@@ -12,7 +12,7 @@ def main() -> None:
     )
     for _ in range(3):
         new_id = random_bs_small()
-        cache = Cached(
+        cache = Cached.from_content(
             identifier=new_id,
             content=random_bs(),
             file_extension="txt"

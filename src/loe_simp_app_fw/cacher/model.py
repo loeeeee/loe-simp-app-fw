@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 import datetime
 from functools import partial
-from typing import Self, TypeAlias, Dict, ClassVar
+from typing import Self, TypeAlias, Dict, ClassVar, Optional
 import hashlib
 import os
 
@@ -31,7 +31,7 @@ def generate_hash(source: Identifier) -> HashKey:
 
 
 @dataclass
-class CachedEntry:
+class Cached:
     # Settings
     _default_time_to_live: ClassVar[int]
     _cache_folder: ClassVar[str]
@@ -41,6 +41,7 @@ class CachedEntry:
     _primary_key: str = field(default="", kw_only=True)
     _birthday: str = field(default_factory=partial(lambda _: str(datetime.date.today()), ""), kw_only=True)
     _content_hash: str = field(default="", kw_only=True)
+    _content: str = field(default="", kw_only=True)
 
     # User things
     identifier: Identifier = field(default="")
@@ -79,7 +80,19 @@ class CachedEntry:
         return
 
     def _to_json(self) -> Dict:
-        return vars(self)
+        """
+        Convert Cached to json with content omitted
+
+        Returns:
+            Dict: The result json
+        """
+        composed_json = {}
+        for key, value in vars(self).items():
+            if key == "_content":
+                continue
+
+            composed_json[key] = value
+        return composed_json
 
     def _reborn(self) -> None:
         """
@@ -109,6 +122,43 @@ class CachedEntry:
             # Generate primary key
             self._primary_key = generate_hash(self.identifier)
         return self._primary_key
+
+    @property
+    def content(self) -> str:
+        if not self._content:
+            # Read in the actual content
+            path: AbsolutePath = os.path.join(self._cache_folder, f"{self.primary_key}.{self.file_extension}")
+            if os.path.isfile(path):
+                with open(path, "r", encoding="utf-8") as f:
+                    content = f.read()
+            else:
+                # In the case of goofy situation
+                Logger.warning(f"Encounter corrupted cache file, {path}")
+                raise CacheNotFound
+            
+            if content == "":
+                raise CacheCorrupted
+
+            # Save it to content
+            self._content = content
+
+            return content
+        else:
+            return self._content
+
+    @property
+    def content_hash(self) -> str:
+        if self._content_hash == "":
+            self._content_hash = generate_hash(self.content)
+        return self._content_hash
+
+    def _save(self) -> None:
+        # Force generate content hash
+        _ = self.content_hash
+        # Save to file system
+        path: AbsolutePath = os.path.join(self._cache_folder, f"{self.primary_key}.{self.file_extension}")
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(self.content)
 
     @property
     def _time_to_live(self) -> int:
@@ -145,56 +195,20 @@ class CachedEntry:
             setattr(new, key, value)
         return new
 
-
-@dataclass
-class Cached(CachedEntry):
-    content: str = field(default="")
-
     @classmethod
-    def _load_content(cls, entry: CachedEntry) -> Self:
+    def from_content(
+        cls,
+        identifier: Identifier,
+        content: str,
+        file_extension: str = "",
+        time_to_live: Optional[int] = None,
+        ) -> Self:
         new = cls()
-        new.__dict__ = entry.__dict__.copy()
-
-        # Read in the actual content
-        path: AbsolutePath = os.path.join(cls._cache_folder, f"{entry.primary_key}.{entry.file_extension}")
-        if os.path.isfile(path):
-            with open(path, "r", encoding="utf-8") as f:
-                new.content = f.read()
-        else:
-            # In the case of goofy situation
-            Logger.warning(f"Encounter corrupted cache file, {path}")
-            raise CacheNotFound
-        
-        if new.content == "":
-            raise CacheCorrupted
-
+        new.identifier = identifier
+        new._content = content
+        new.file_extension = file_extension
+        new.time_to_live = time_to_live
         return new
 
-    @property
-    def content_hash(self) -> str:
-        if self._content_hash == "":
-            self._content_hash = generate_hash(self.content)
-        return self._content_hash
 
-    def _save(self) -> None:
-        # Force generate content hash
-        _ = self.content_hash
-        # Save to file system
-        path: AbsolutePath = os.path.join(self._cache_folder, f"{self.primary_key}.{self.file_extension}")
-        with open(path, "w", encoding="utf-8") as f:
-            f.write(self.content)
-
-    def _to_json(self) -> Dict:
-        """
-        Convert Cached to json with content omitted
-
-        Returns:
-            Dict: The result json
-        """
-        composed_json = {}
-        for key, value in vars(self).items():
-            if key == "content":
-                continue
-
-            composed_json[key] = value
-        return composed_json
+        

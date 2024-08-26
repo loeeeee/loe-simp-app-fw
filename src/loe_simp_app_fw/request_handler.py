@@ -171,7 +171,7 @@ class RequestHandler:
                 # --------------- Cache System ----------------------
                 extension_name = cls.extension_gusser(URL, response, default=file_extension_hint)
                 Logger.debug(f"Best extension: {extension_name}")
-                cache = Cached(
+                cache = Cached.from_content(
                     identifier = URL,
                     content = response.text,
                     time_to_live = cache_time_to_live,

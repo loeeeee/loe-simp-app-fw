@@ -3,7 +3,7 @@ from typing import Dict, ClassVar
 import os
 import json
 
-from .model import AbsolutePath, HashKey, CachedEntry, Cached, Identifier, generate_hash
+from .model import AbsolutePath, HashKey, Cached, Identifier, generate_hash
 from .exception import CacheMiss
 from ..logger import Logger
 
@@ -19,7 +19,7 @@ class CacheMap:
     _disable: ClassVar[bool]
 
     # Variables
-    _map: ClassVar[Dict[HashKey, CachedEntry|Cached]] = {}
+    _map: ClassVar[Dict[HashKey, Cached]] = {}
     _isSetup: ClassVar[bool] = False
     
     # Constant
@@ -44,10 +44,6 @@ class CacheMap:
         Cached.setup(
             default_time_to_live=time_to_live,
             cache_folder=cache_folder,
-        )
-        CachedEntry.setup(
-            default_time_to_live=time_to_live,
-            cache_folder=cache_folder
         )
 
         cls._neverExpire = neverExpire # NotImplement
@@ -88,19 +84,12 @@ class CacheMap:
     def __getitem__(cls, key: Identifier, /) -> Cached:
         key = generate_hash(key)
         try:
-            candidate: Cached|CachedEntry = cls._map[key]
+            candidate: Cached = cls._map[key]
         except KeyError:
             Logger.debug(f"Cannot find cache {key}")
             raise CacheMiss
         else:
-            if isinstance(candidate, Cached):
-                # It is already loaded
-                return candidate
-            else:
-                # It is not yet loaded
-                candidate = Cached._load_content(candidate)
-                cls._map[key] = candidate
-                return candidate
+            return candidate
 
     @classmethod
     def __delitem__(cls, key: Identifier, /) -> None:
@@ -131,7 +120,7 @@ class CacheMap:
             composed_json = json.load(f)
         
         for entry in composed_json:
-            cls._map[entry["_primary_key"]] = CachedEntry.from_json(entry)
+            cls._map[entry["_primary_key"]] = Cached.from_json(entry)
 
         Logger.debug(f"Loaded cache meta from file")
         return
