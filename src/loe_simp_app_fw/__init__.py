@@ -32,4 +32,4 @@ __all__ = [
     "Prometheus",
     ]
 
-__version__ = "2.10.2"
+__version__ = "2.10.3"
