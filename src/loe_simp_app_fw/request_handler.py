@@ -129,7 +129,7 @@ class RequestHandler:
         return response
 
     @classmethod
-    def get(cls, URL: str, ignoreCache: bool = False, file_extension_hint: str = "html", cache_time_to_live: Optional[int] = None) -> str:
+    def get(cls, URL: str, ignoreCache: bool = False, file_extension_hint: str = "html", cache_time_to_live: Optional[int] = None, isFromOldSchema: bool = False) -> str:
         """Main API, get some URL
 
         Args:
@@ -144,6 +144,10 @@ class RequestHandler:
         # --------------- Cache System ----------------------
         if (result := cls._cacher[URL]) and not ignoreCache:
             if not result.isExpired:
+                if isFromOldSchema:
+                    result.core.identifier = URL
+                    Logger.info(f"Identifier is set to {URL}")
+                    result.core._save()
                 return result.content
             else:
                 Logger.debug(f"Cache miss due to cache expire")
