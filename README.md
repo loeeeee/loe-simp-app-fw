@@ -39,7 +39,7 @@ In `configuration.py`, after the initialization, it would be,
 import os
 
 from typing import ClassVar
-from loe_simp_app_fw import BaseConfig, FrameworkConfig, Logger, NotInitialized
+from loe_simp_app_fw import BaseConfig, FrameworkConfig, Logger, NotInitialized, CacheManager
 
 #---------------------------------------------------------------
 
@@ -75,6 +75,9 @@ class Config(ProjectConfig, FrameworkConfig):
 
 # Init logger
 Logger.bootstrap(Config.log_directory, log_level = Config.log_level, buffering = Config.log_buffer_size)
+
+# Init Cache Manager
+CacheManager.setup(Config.cache_directory, Config.cache_time_to_live)
 
 Logger.info("Configuration finish initialization")
 ```
