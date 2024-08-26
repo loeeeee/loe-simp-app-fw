@@ -39,7 +39,7 @@ class CachedEntry:
 
     # Auto things
     _primary_key: str = field(default="", kw_only=True)
-    _birthday: str = field(default_factory=partial(lambda _: str(datetime.date.today), ""), kw_only=True)
+    _birthday: str = field(default_factory=partial(lambda _: str(datetime.date.today()), ""), kw_only=True)
     _content_hash: str = field(default="", kw_only=True)
 
     # User things
@@ -176,24 +176,25 @@ class Cached(CachedEntry):
             self._content_hash = generate_hash(self.content)
         return self._content_hash
 
-    def _save(self) -> CachedEntry:
+    def _save(self) -> None:
+        # Force generate content hash
+        _ = self.content_hash
         # Save to file system
         path: AbsolutePath = os.path.join(self._cache_folder, f"{self.primary_key}.{self.file_extension}")
-        if os.path.isfile(path) and self.time_to_live != 0:
-            # Skip saving when ttl is 0
-            with open(path, "w", encoding="utf-8") as f:
-                f.write(self.content)
-        else:
-            # In the case of goofy situation
-            Logger.warning(f"Encounter corrupted cache file, {path}")
-            raise CacheCorrupted
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(self.content)
 
-        # Generate new entry
-        entry: CachedEntry = CachedEntry()
+    def _to_json(self) -> Dict:
+        """
+        Convert Cached to json with content omitted
+
+        Returns:
+            Dict: The result json
+        """
+        composed_json = {}
         for key, value in vars(self).items():
             if key == "content":
                 continue
-            setattr(entry, key, value)
 
-        return entry
-
+            composed_json[key] = value
+        return composed_json

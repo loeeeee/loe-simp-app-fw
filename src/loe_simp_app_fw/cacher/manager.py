@@ -10,7 +10,7 @@ from ..logger import Logger
 
 class CacheMap:
     # Settings
-    _cache_folder: ClassVar[AbsolutePath] = ""
+    _cache_folder: ClassVar[AbsolutePath]
     _days_to_expire: ClassVar[datetime.timedelta]
 
     # Override
@@ -54,6 +54,9 @@ class CacheMap:
         cls._readOnly = readOnly    # NotImplement
         cls._disable = disable  # NotImplement
 
+        # Load previous saves
+        cls.load()
+
         # Flag it
         cls._isSetup = True
 
@@ -64,18 +67,22 @@ class CacheMap:
         ## If an old one exists, check if content updates
         ### If updates an old one, save the updated content
         try:
-            old_cache = cls._map[cached._primary_key]
+            old_cache = cls._map[cached.primary_key]
         except KeyError:
             # No old cache found
-            cls._map[cached._primary_key] = cached
+            cls._map[cached.primary_key] = cached
+            cached._save()
         else:
             # Old cache found
             if cached._content_hash != old_cache._content_hash:
                 # Update cache
                 cached._save()
-                cls._map[cached._primary_key] = cached
+                cls._map[cached.primary_key] = cached
+            else:
+                Logger.debug("Cache is not updated")
+
             # Update birthday of the cached
-            cls._map[cached._primary_key]._reborn()
+            cls._map[cached.primary_key]._reborn()
 
     @classmethod
     def __getitem__(cls, key: Identifier, /) -> Cached:
@@ -116,6 +123,8 @@ class CacheMap:
 
     @classmethod
     def load(cls) -> None:
+        cls._upgrade_meta_to_new_schema()
+
         meta_file_path: AbsolutePath = os.path.join(cls._cache_folder, cls._meta_file_name)
         Logger.debug(f"Load meta file from {meta_file_path}")
         with open(meta_file_path, "r", encoding="utf-8") as f:
@@ -129,16 +138,56 @@ class CacheMap:
 
     @classmethod
     def save(cls) -> None:
+        if not cls._isSetup:
+            Logger.warning("CacheMap was never setup, skipping saving")
+            return
+    
         composed_json = []
         for entry in cls._map.values():
             composed_json.append(entry._to_json())
 
         meta_file_path: AbsolutePath = os.path.join(cls._cache_folder, cls._meta_file_name)
         with open(meta_file_path, "w", encoding="utf-8") as f:
-            json.dump(composed_json, f)
-        Logger.debug(f"Saved cache meta to file in {meta_file_path}")
+            json.dump(composed_json, f, indent=2)
+        Logger.info(f"Saved cache meta to file in {meta_file_path}")
         return
 
     @classmethod
     def _upgrade_meta_to_new_schema(cls) -> None:
+        Logger.info("Upgrade meta file to new schema")
+
+        # Load old json
+        meta_file_path: AbsolutePath = os.path.join(cls._cache_folder, cls._meta_file_name)
+        Logger.debug(f"Load meta file from {meta_file_path}")
+        with open(meta_file_path, "r", encoding="utf-8") as f:
+            composed_json = json.load(f)
+    
+        # Upgrade schema
+        reformated_json = []
+        try:
+            for hash_key, (birthday, file_name) in composed_json.items():
+                file_extension = file_name.split(".")[-1]
+                reformated_json.append(
+                    {
+                        "_primary_key": hash_key,
+                        "_birthday": birthday,
+                        "_content_hash": "",
+                        "identifier": "",
+                        "file_extension": file_extension,
+                        "time_to_live": None,
+                    }
+                )
+        except AttributeError:
+            Logger.info("It is already the latest schema")
+            return
+
+        # Backup
+        backup_meta_file_path: AbsolutePath = os.path.join(cls._cache_folder, "meta-backup.json")
+        with open(backup_meta_file_path, "w", encoding="utf-8") as f:
+            json.dump(composed_json, f, indent=2)
+        
+        # Commit the change
+        with open(meta_file_path, "w", encoding="utf-8") as f:
+            json.dump(reformated_json, f, indent=2)
+        Logger.info(f"Finish upgrade schema")
         return
