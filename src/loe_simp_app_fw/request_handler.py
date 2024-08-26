@@ -151,8 +151,8 @@ class RequestHandler:
         except CacheCorrupted:
             pass
         else:
-            isCacheHit: bool = ignoreCache
-            
+            isCacheHit: bool = not ignoreCache
+
             if result.isExpired:
                 Logger.debug(f"Cache miss due to cache expire")
                 isCacheHit = False
