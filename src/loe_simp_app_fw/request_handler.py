@@ -6,7 +6,7 @@ import mimetypes
 
 import requests
 
-from .cacher import CacheMap, Cached
+from .cacher import CacheManager, Cached
 from .logger import Logger
 
 
@@ -63,7 +63,7 @@ class RequestHandler:
     retrieve_interval: ClassVar[Tuple[float, float]] = (5,1) # Mu, Sigma
 
     # Caching system
-    _cacher: ClassVar[CacheMap] = CacheMap()
+    _cacher: ClassVar[CacheManager] = CacheManager()
 
     _last_request_time: ClassVar[float] = time.time()
 

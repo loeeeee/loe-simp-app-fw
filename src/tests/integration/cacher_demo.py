@@ -1,11 +1,11 @@
-from ...loe_simp_app_fw import CacheMap, Logger, Cached
+from ...loe_simp_app_fw import CacheManager, Logger, Cached
 
 from random import random
 
 def main() -> None:
     Logger.bootstrap("./log", log_level="DEBUG")
 
-    gcm = CacheMap()
+    gcm = CacheManager()
     gcm.setup(
         cache_folder=".cache",
         time_to_live=7,

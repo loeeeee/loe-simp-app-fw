@@ -188,3 +188,35 @@ class CacheMap:
             json.dump(reformated_json, f, indent=2)
         Logger.info(f"Finish upgrade schema")
         return
+
+
+class CacheManager:
+    core: ClassVar[CacheMap] = CacheMap()
+
+    @classmethod
+    def setup(
+        cls, 
+        cache_folder: AbsolutePath, 
+        time_to_live: int, 
+        *args, 
+        neverExpire: bool = False, 
+        readOnly: bool = False, 
+        disable: bool = False, 
+        **kwargs
+        ) -> None:
+        cls.core.setup(
+            cache_folder, 
+            time_to_live, 
+            neverExpire = neverExpire, 
+            readOnly = readOnly, 
+            disable = disable
+        )
+
+    def append(self, cache: Cached, /) -> None:
+        return self.core.append(cache)
+
+    def __getitem__(self, key: Identifier, /) -> Cached:
+        return self.core[key]
+
+    def __len__(self) -> int:
+        return len(self.core)

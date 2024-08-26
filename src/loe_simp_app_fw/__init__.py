@@ -1,6 +1,6 @@
 from .logger import Logger, LogEntry
 from .config import BaseConfig, FrameworkConfig, NotInitialized
-from .cacher import CacheMiss, CacheNotFound, CacheCorrupted, Cached, CacheMap
+from .cacher import CacheMiss, CacheNotFound, CacheCorrupted, Cached, CacheManager
 from .prometheus import Prometheus
 from .csvnia import CSVReader, CSVWriter
 from .notebook import isNotebook
@@ -18,7 +18,7 @@ __all__ = [
     "CacheMiss",
     "CacheNotFound",
     "Cached",
-    "CacheMap",
+    "CacheManager",
     "CSVReader",
     "CSVWriter",
     "FrameworkConfig",

@@ -2,7 +2,7 @@ import atexit
 from typing import ClassVar
 
 from .logger import Logger
-from .cacher import CacheMap
+from .cacher import CacheManager
 from .prometheus import Prometheus
 
 
@@ -29,7 +29,7 @@ class Register:
     @staticmethod
     def save_cache_to_disk():
         Logger.debug("Save cache to disk")
-        CacheMap.save()
+        CacheManager.core.save()
         Logger.debug("Finished")
 
     @staticmethod
