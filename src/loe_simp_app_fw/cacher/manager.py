@@ -3,7 +3,7 @@ from typing import Dict, ClassVar
 import os
 import json
 
-from .model import AbsolutePath, HashKey, Cached, Identifier, generate_hash
+from .model import AbsolutePath, Cached, HashKey, _CachedCore, Identifier, generate_hash
 from .exception import CacheMiss
 from ..logger import Logger
 
@@ -19,7 +19,7 @@ class CacheMap:
     _disable: ClassVar[bool]
 
     # Variables
-    _map: ClassVar[Dict[HashKey, Cached]] = {}
+    _map: ClassVar[Dict[HashKey, _CachedCore]] = {}
     _isSetup: ClassVar[bool] = False
     
     # Constant
@@ -41,7 +41,7 @@ class CacheMap:
         cls._days_to_expire = datetime.timedelta(days=time_to_live)
 
         # Setup Cached and CachedEntry
-        Cached.setup(
+        _CachedCore.setup(
             default_time_to_live=time_to_live,
             cache_folder=cache_folder,
         )
@@ -56,40 +56,46 @@ class CacheMap:
         # Flag it
         cls._isSetup = True
 
+    # --------------------------------------- Major API ---------------------------------------
+
     @classmethod
     def append(cls, cached: Cached, /) -> None:
+        # Extract core
+        core = cached.core
 
         # Add downloaded content to cache storage
         ## If an old one exists, check if content updates
         ### If updates an old one, save the updated content
         try:
-            old_cache = cls._map[cached.primary_key]
+            old_cache = cls._map[core.primary_key]
         except KeyError:
             # No old cache found
-            cls._map[cached.primary_key] = cached
-            cached._save()
+            cls._map[core.primary_key] = core
+            core._save()
         else:
             # Old cache found
-            if cached._content_hash != old_cache._content_hash:
+            if core._content_hash != old_cache._content_hash:
                 # Update cache
-                cached._save()
-                cls._map[cached.primary_key] = cached
+                core._save()
+                cls._map[core.primary_key] = core
             else:
                 Logger.debug("Cache is not updated")
 
             # Update birthday of the cached
-            cls._map[cached.primary_key]._reborn()
+            cls._map[core.primary_key]._reborn()
 
     @classmethod
     def __getitem__(cls, key: Identifier, /) -> Cached:
         key = generate_hash(key)
         try:
-            candidate: Cached = cls._map[key]
+            candidate: _CachedCore = cls._map[key]
         except KeyError:
             Logger.debug(f"Cannot find cache {key}")
             raise CacheMiss
         else:
-            return candidate
+            return Cached.from_core(candidate)
+
+    # --------------------------------------- Minor API ---------------------------------------
 
     @classmethod
     def __delitem__(cls, key: Identifier, /) -> None:
@@ -110,6 +116,8 @@ class CacheMap:
         """
         raise NotImplemented
 
+    # --------------------------------------- Internal Management ---------------------------------------
+
     @classmethod
     def load(cls) -> None:
         cls._upgrade_meta_to_new_schema()
@@ -120,7 +128,7 @@ class CacheMap:
             composed_json = json.load(f)
         
         for entry in composed_json:
-            cls._map[entry["_primary_key"]] = Cached.from_json(entry)
+            cls._map[entry["_primary_key"]] = _CachedCore.from_json(entry)
 
         Logger.debug(f"Loaded cache meta from file")
         return
@@ -133,7 +141,7 @@ class CacheMap:
     
         composed_json = []
         for entry in cls._map.values():
-            composed_json.append(entry._to_json())
+            composed_json.append(entry._to_record())
 
         meta_file_path: AbsolutePath = os.path.join(cls._cache_folder, cls._meta_file_name)
         with open(meta_file_path, "w", encoding="utf-8") as f:
@@ -163,7 +171,7 @@ class CacheMap:
                         "_content_hash": "",
                         "identifier": "",
                         "file_extension": file_extension,
-                        "time_to_live": None,
+                        "_time_to_live": None,
                     }
                 )
         except AttributeError:

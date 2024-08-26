@@ -31,22 +31,24 @@ def generate_hash(source: Identifier) -> HashKey:
 
 
 @dataclass
-class Cached:
+class _CachedCore:
     # Settings
     _default_time_to_live: ClassVar[int]
     _cache_folder: ClassVar[str]
     _isSetup: ClassVar[bool] = False
 
+    # Compulsory when init
+    identifier: Identifier
+
+    # Optional when init
+    _content: str|None = field(default=None, kw_only=True)
+    _time_to_live: int|None = field(default=None, kw_only=True)
+    file_extension: str = field(default="", kw_only=True)
+
     # Auto things
     _primary_key: str = field(default="", kw_only=True)
-    _birthday: str = field(default_factory=partial(lambda _: str(datetime.date.today()), ""), kw_only=True)
     _content_hash: str = field(default="", kw_only=True)
-    _content: str = field(default="", kw_only=True)
-
-    # User things
-    identifier: Identifier = field(default="")
-    file_extension: str = field(default="", kw_only=True)
-    time_to_live: int|None = field(default=None, kw_only=True)
+    _birthday: str = field(default_factory=partial(lambda _: str(datetime.date.today()), ""), kw_only=True)
     """
     Time to live:
         - None
@@ -79,9 +81,9 @@ class Cached:
             raise NotYetSetup
         return
 
-    def _to_json(self) -> Dict:
+    def _to_record(self) -> Dict:
         """
-        Convert Cached to json with content omitted
+        Convert Cached to json record with content omitted
 
         Returns:
             Dict: The result json
@@ -102,6 +104,14 @@ class Cached:
 
     def __str__(self) -> str:
         return f"{self.identifier} {self.time_to_live}"
+
+    def _save(self) -> None:
+        # Force generate content hash
+        _ = self.content_hash
+        # Save to file system
+        path: AbsolutePath = os.path.join(self._cache_folder, f"{self.primary_key}.{self.file_extension}")
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(self.content)
 
     @property
     def primary_key(self) -> HashKey:
@@ -125,7 +135,17 @@ class Cached:
 
     @property
     def content(self) -> str:
-        if not self._content:
+        """
+        Load content when called
+
+        Raises:
+            CacheNotFound
+            CacheCorrupted: Cache contains unexpected data
+
+        Returns:
+            str: The actual content
+        """
+        if self._content == None:
             # Read in the actual content
             path: AbsolutePath = os.path.join(self._cache_folder, f"{self.primary_key}.{self.file_extension}")
             if os.path.isfile(path):
@@ -152,31 +172,80 @@ class Cached:
             self._content_hash = generate_hash(self.content)
         return self._content_hash
 
-    def _save(self) -> None:
-        # Force generate content hash
-        _ = self.content_hash
-        # Save to file system
-        path: AbsolutePath = os.path.join(self._cache_folder, f"{self.primary_key}.{self.file_extension}")
-        with open(path, "w", encoding="utf-8") as f:
-            f.write(self.content)
-
     @property
-    def _time_to_live(self) -> int:
+    def time_to_live(self) -> int:
         """
         Guarantee the return of an integer
 
         Returns:
             int: Number of days to live for the cache
         """
-        if self.time_to_live == None:
+        if self._time_to_live == None:
             return self._default_time_to_live
         else:
-            return self.time_to_live
-    
+            return self._time_to_live
+
+    @classmethod
+    def from_json(cls, source: Dict) -> Self:
+        new = cls(
+            "" # THE PLACEHOLDER
+        )
+        for key, value in source.items():
+            setattr(new, key, value)
+        return new
+
+
+@dataclass
+class Cached:
+    core: _CachedCore
+
+    @classmethod
+    def from_content(
+        cls,
+        identifier: Identifier,
+        content: str,
+        file_extension: str = "",
+        time_to_live: Optional[int] = None,
+        ) -> Self:
+        """
+        Build a cached object for store in the cache system
+
+        Args:
+            identifier (Identifier): The ID for later retrieval
+            content (str): Content that the ID refers to
+            file_extension (str, optional): The format of the content, e.g., txt, json, HTML, etc. Defaults to "".
+            time_to_live (Optional[int], optional): The number of days before the cache expire. Defaults to None.
+
+        Returns:
+            Self: A new cached content for storage
+        """
+        core = _CachedCore(
+            identifier=identifier,
+            _content=content,
+            file_extension=file_extension,
+            _time_to_live=time_to_live,
+        )
+        return cls(core)
+
+    @classmethod
+    def from_core(
+        cls,
+        core: _CachedCore,
+        ) -> Self:
+        return cls(core)
+
+    @property
+    def identifier(self) -> Identifier:
+        return self.core.identifier
+
+    @property
+    def content(self) -> str:
+        return self.core.content
+
     @property
     def isExpired(self) -> bool:
-        if self._time_to_live >= 0:
-            remaining_life = datetime.date.fromisoformat(self._birthday) + datetime.timedelta(days=self._time_to_live) - datetime.date.today()
+        if self.core.time_to_live >= 0:
+            remaining_life = datetime.date.fromisoformat(self.core._birthday) + datetime.timedelta(days=self.core.time_to_live) - datetime.date.today()
             isExpired = (remaining_life <= datetime.timedelta(days=0))
             if isExpired:
                 Logger.info(f"Cache expired by {remaining_life}")
@@ -187,28 +256,5 @@ class Cached:
         else:
             # Never expire
             return False
-
-    @classmethod
-    def from_json(cls, source: Dict) -> Self:
-        new = cls()
-        for key, value in source.items():
-            setattr(new, key, value)
-        return new
-
-    @classmethod
-    def from_content(
-        cls,
-        identifier: Identifier,
-        content: str,
-        file_extension: str = "",
-        time_to_live: Optional[int] = None,
-        ) -> Self:
-        new = cls()
-        new.identifier = identifier
-        new._content = content
-        new.file_extension = file_extension
-        new.time_to_live = time_to_live
-        return new
-
 
         
