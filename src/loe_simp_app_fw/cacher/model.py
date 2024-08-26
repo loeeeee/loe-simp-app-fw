@@ -103,7 +103,7 @@ class _CachedCore:
         self._birthday = str(datetime.date.today())
 
     def __str__(self) -> str:
-        return f"{self.identifier} {self.time_to_live}"
+        return f"{self.identifier} {self._birthday}"
 
     def _save(self) -> None:
         # Force generate content hash
@@ -131,6 +131,7 @@ class _CachedCore:
         if not self._primary_key:
             # Generate primary key
             self._primary_key = generate_hash(self.identifier)
+            Logger.debug(f"Generated primary key, {self._primary_key}")
         return self._primary_key
 
     @property
@@ -171,6 +172,7 @@ class _CachedCore:
     def content_hash(self) -> str:
         if self._content_hash == "":
             self._content_hash = generate_hash(self.content)
+            Logger.debug(f"Generated content hash, {self._content_hash}")
         return self._content_hash
 
     @property

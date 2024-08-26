@@ -3,12 +3,9 @@ import time
 import random
 import os
 import mimetypes
-
 import requests
 
-from loe_simp_app_fw.cacher.exception import CacheCorrupted
-
-from .cacher import CacheManager, Cached, CacheMiss
+from .cacher import CacheManager, Cached, CacheMiss, CacheCorrupted, CacheNotFound
 from .logger import Logger
 
 
@@ -149,7 +146,9 @@ class RequestHandler:
         except CacheMiss:
             Logger.info(f"Cache miss for {URL}")
         except CacheCorrupted:
-            pass
+            Logger.info(f"Corrupted cache encountered for {URL}, proceed with normal retrieval")
+        except CacheNotFound:
+            Logger.info(f"Cache file missing for {URL}")
         else:
             isCacheHit: bool = not ignoreCache
 
@@ -161,7 +160,6 @@ class RequestHandler:
                 if isFromOldSchema:
                     result.core.identifier = URL
                     Logger.info(f"Identifier is set to {URL}")
-                    result.core._save()
                 return result.content
         # --------------- Cache System ----------------------
 

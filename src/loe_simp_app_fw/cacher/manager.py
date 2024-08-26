@@ -72,6 +72,7 @@ class CacheMap:
             old_cache = cls._map[core.primary_key]
         except KeyError:
             # No old cache found
+            Logger.debug(f"No old cache found for {core}")
             cls._map[core.primary_key] = core
             core._save()
         else:
