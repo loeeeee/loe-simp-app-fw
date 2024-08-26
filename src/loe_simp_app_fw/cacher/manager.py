@@ -6,7 +6,9 @@ import json
 from .model import AbsolutePath, Cached, HashKey, _CachedCore, Identifier, generate_hash
 from .exception import CacheMiss
 from ..logger import Logger
+from ..prometheus import Prometheus
 
+cache_monitor = Prometheus().get("CacheManager")
 
 class CacheMap:
     # Settings
@@ -91,8 +93,10 @@ class CacheMap:
             candidate: _CachedCore = cls._map[key]
         except KeyError:
             Logger.debug(f"Cannot find cache {key}")
+            cache_monitor.failure("Get")
             raise CacheMiss
         else:
+            cache_monitor.success("Get")
             return Cached.from_core(candidate)
 
     # --------------------------------------- Minor API ---------------------------------------
