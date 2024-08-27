@@ -128,7 +128,7 @@ class RequestHandler:
         return response
 
     @classmethod
-    def get(cls, URL: str, ignoreCache: bool = False, file_extension_hint: str = "html", cache_time_to_live: Optional[int] = None, isFromOldSchema: bool = False) -> str:
+    def get(cls, URL: str, ignoreCache: bool = False, file_extension_hint: str = "html", cache_time_to_live: Optional[int] = None) -> str:
         """Main API, get some URL
 
         Args:
@@ -157,9 +157,6 @@ class RequestHandler:
                 isCacheHit = False
 
             if isCacheHit:
-                if isFromOldSchema:
-                    result.core.identifier = URL
-                    Logger.info(f"Identifier is set to {URL}")
                 return result.content
         # --------------- Cache System ----------------------
 

@@ -125,8 +125,6 @@ class CacheMap:
 
     @classmethod
     def load(cls) -> None:
-        cls._upgrade_meta_to_new_schema()
-
         meta_file_path: AbsolutePath = os.path.join(cls._cache_folder, cls._meta_file_name)
         Logger.debug(f"Load meta file from {meta_file_path}")
         try:
@@ -137,7 +135,7 @@ class CacheMap:
         else:
             for entry in composed_json:
                 cls._map[entry["_primary_key"]] = _CachedCore.from_json(entry)
-                
+
             Logger.debug(f"Loaded cache meta from file")
         return
 
@@ -156,46 +154,6 @@ class CacheMap:
         with open(meta_file_path, "w", encoding="utf-8") as f:
             json.dump(composed_json, f, indent=2)
         Logger.info(f"Saved cache meta to file in {meta_file_path}")
-        return
-
-    @classmethod
-    def _upgrade_meta_to_new_schema(cls) -> None:
-        Logger.info("Upgrade meta file to new schema")
-
-        # Load old json
-        meta_file_path: AbsolutePath = os.path.join(cls._cache_folder, cls._meta_file_name)
-        Logger.debug(f"Load meta file from {meta_file_path}")
-        with open(meta_file_path, "r", encoding="utf-8") as f:
-            composed_json = json.load(f)
-    
-        # Upgrade schema
-        reformated_json = []
-        try:
-            for hash_key, (birthday, file_name) in composed_json.items():
-                file_extension = file_name.split(".")[-1]
-                reformated_json.append(
-                    {
-                        "_primary_key": hash_key,
-                        "_birthday": birthday,
-                        "_content_hash": "",
-                        "identifier": "",
-                        "file_extension": file_extension,
-                        "_time_to_live": None,
-                    }
-                )
-        except AttributeError:
-            Logger.info("It is already the latest schema")
-            return
-
-        # Backup
-        backup_meta_file_path: AbsolutePath = os.path.join(cls._cache_folder, "meta-backup.json")
-        with open(backup_meta_file_path, "w", encoding="utf-8") as f:
-            json.dump(composed_json, f, indent=2)
-        
-        # Commit the change
-        with open(meta_file_path, "w", encoding="utf-8") as f:
-            json.dump(reformated_json, f, indent=2)
-        Logger.info(f"Finish upgrade schema")
         return
 
 
