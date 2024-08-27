@@ -129,13 +129,16 @@ class CacheMap:
 
         meta_file_path: AbsolutePath = os.path.join(cls._cache_folder, cls._meta_file_name)
         Logger.debug(f"Load meta file from {meta_file_path}")
-        with open(meta_file_path, "r", encoding="utf-8") as f:
-            composed_json = json.load(f)
-        
-        for entry in composed_json:
-            cls._map[entry["_primary_key"]] = _CachedCore.from_json(entry)
-
-        Logger.debug(f"Loaded cache meta from file")
+        try:
+            with open(meta_file_path, "r", encoding="utf-8") as f:
+                composed_json = json.load(f)
+        except FileNotFoundError:
+            Logger.warning(f"Cannot find meta file at {meta_file_path}")
+        else:
+            for entry in composed_json:
+                cls._map[entry["_primary_key"]] = _CachedCore.from_json(entry)
+                
+            Logger.debug(f"Loaded cache meta from file")
         return
 
     @classmethod
