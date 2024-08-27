@@ -213,6 +213,17 @@ class RequestHandler:
     
     @staticmethod
     def extension_gusser(URL: Optional[str] = None, response: Optional[requests.Response] = None, default: str = "") -> str:
+        """
+        Guess the extension name based on URL and response, fallback to default when fail to guess
+
+        Args:
+            URL (Optional[str], optional): The URL where the file is from. Defaults to None.
+            response (Optional[requests.Response], optional): The response from Get the URL. Defaults to None.
+            default (str, optional): The default file extension name. Defaults to "".
+
+        Returns:
+            str: The guessed extension name, e.g. "html", "txt"
+        """
         extension_name_guess_1 = ""
         extension_name_guess_2 = ""
         if URL:
@@ -236,4 +247,4 @@ class RequestHandler:
         else:
             # Last resort
             extension_name = default
-        return f".{extension_name}"
+        return extension_name

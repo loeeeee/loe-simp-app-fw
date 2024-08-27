@@ -147,6 +147,7 @@ class CacheMap:
         composed_json = []
         for entry in cls._map.values():
             composed_json.append(entry._to_record())
+        Logger.info("Finish compose cache map meta")
 
         meta_file_path: AbsolutePath = os.path.join(cls._cache_folder, cls._meta_file_name)
         with open(meta_file_path, "w", encoding="utf-8") as f:
