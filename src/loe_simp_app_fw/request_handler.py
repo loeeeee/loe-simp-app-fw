@@ -5,7 +5,7 @@ import os
 import mimetypes
 import requests
 
-from .cacher import CacheManager, Cached, CacheMiss, CacheCorrupted, CacheNotFound
+from .cacher import CacheManager, Cached, CacheCorrupted, CacheNotFound
 from .logger import Logger
 
 
@@ -143,8 +143,6 @@ class RequestHandler:
         # --------------- Cache System ----------------------
         try:
             result = cls._cacher[URL]
-        except CacheMiss:
-            Logger.info(f"Cache miss for {URL}")
         except CacheCorrupted:
             Logger.info(f"Corrupted cache encountered for {URL}, proceed with normal retrieval")
         except CacheNotFound:
@@ -157,10 +155,7 @@ class RequestHandler:
                 isCacheHit = False
 
             if isCacheHit:
-                if isinstance(result.content, str):
-                    return result.content
-                else:
-                    Logger.error(f"Unexpected type, {type(result.content)}")
+                return result.content_str
         # --------------- Cache System ----------------------
 
         # Handle retry

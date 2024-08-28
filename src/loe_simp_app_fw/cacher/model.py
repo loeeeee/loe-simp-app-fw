@@ -54,7 +54,7 @@ class _CachedCore:
 
     # Auto things
     _primary_key: str = field(default="", kw_only=True)
-    _content_hash: str = field(default="", kw_only=True)
+    _content_hash: str|None = field(default=None, kw_only=True)
     _birthday: str = field(default_factory=partial(lambda _: str(datetime.date.today()), ""), kw_only=True)
     """
     Time to live:
@@ -139,6 +139,15 @@ class _CachedCore:
         else:
             Logger.warning(f"Cannot find cache file at {self.cache_path}")
             raise CacheNotFound
+    
+    def _load_content(self) -> None:
+        content = self._get_raw_content()
+        if self.file_extension == self._bytes_extension_name:
+            self._content = content
+        else:
+            self._content = content.decode(encoding="utf-8")
+        Logger.debug(f"Finish loading the content")
+        return
 
     @property
     def primary_key(self) -> HashKey:
@@ -164,12 +173,12 @@ class _CachedCore:
     @property
     def content_str(self) -> str:
         if self._content == None:
-            self._content = self._get_raw_content().decode(encoding="utf-8")
-        elif isinstance(self._content, str):
-            pass
-        else:
+            self._load_content()
+
+        if not isinstance(self._content, str):
             Logger.error(f"Unexpected type for content, {type(self._content)}")
             raise TypeError
+        
         return self._content
 
     @property
@@ -183,6 +192,13 @@ class _CachedCore:
             raise TypeError
         return self._content
 
+    @property
+    def content(self) -> str|bytes:
+        if self.file_extension == self._bytes_extension_name:
+            return self.content_bytes
+        else:
+            return self.content_str
+
     @cached_property
     def cache_path(self) -> AbsolutePath:
         path: AbsolutePath = os.path.join(self._cache_folder, f"{self.primary_key}.{self.file_extension}")
@@ -190,9 +206,11 @@ class _CachedCore:
 
     @property
     def content_hash(self) -> str:
-        if self._content_hash == "" and self._content != None:
-            self._content_hash = generate_hash(self._content)
+        if self._content_hash == None:
+            # Generate hash
+            self._content_hash = generate_hash(self.content)
             Logger.debug(f"Generated content hash, {self._content_hash}")
+
         return self._content_hash
 
     @property

@@ -4,7 +4,7 @@ import os
 import json
 
 from .model import AbsolutePath, Cached, HashKey, _CachedCore, Identifier, generate_hash
-from .exception import CacheMiss
+from .exception import CacheNotFound
 from ..logger import Logger
 from ..prometheus import Prometheus
 
@@ -95,7 +95,7 @@ class CacheMap:
         except KeyError:
             Logger.debug(f"Cannot find cache {key}")
             cache_monitor.failure("Get")
-            raise CacheMiss
+            raise CacheNotFound
         else:
             cache_monitor.success("Get")
             return Cached(candidate)
