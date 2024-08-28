@@ -98,7 +98,7 @@ class CacheMap:
             raise CacheMiss
         else:
             cache_monitor.success("Get")
-            return Cached.from_core(candidate)
+            return Cached(candidate)
 
     # --------------------------------------- Minor API ---------------------------------------
 

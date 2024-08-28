@@ -157,7 +157,10 @@ class RequestHandler:
                 isCacheHit = False
 
             if isCacheHit:
-                return result.content
+                if isinstance(result.content, str):
+                    return result.content
+                else:
+                    Logger.error(f"Unexpected type, {type(result.content)}")
         # --------------- Cache System ----------------------
 
         # Handle retry
