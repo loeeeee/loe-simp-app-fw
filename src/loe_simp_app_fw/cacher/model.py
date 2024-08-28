@@ -1,7 +1,8 @@
 from dataclasses import dataclass, field
 import datetime
-from functools import partial
-from typing import AnyStr, Self, TypeAlias, Dict, ClassVar, Optional
+from functools import cached_property, partial
+from os.path import isfile
+from typing import AnyStr, Self, TypeAlias, Dict, ClassVar, Optional, Literal
 import hashlib
 import os
 
@@ -40,11 +41,14 @@ class _CachedCore:
     _cache_folder: ClassVar[str]
     _isSetup: ClassVar[bool] = False
 
+    # Constant
+    _bytes_extension_name: ClassVar[Literal["bytes"]] = "bytes"
+
     # Compulsory when init
     identifier: Identifier
 
     # Optional when init
-    _content: bytes|str|None = field(default=None, kw_only=True)
+    _content: bytes|str|None = field(default=None, kw_only=True) # Served as a cache
     _time_to_live: int|None = field(default=None, kw_only=True)
     file_extension: str = field(default="", kw_only=True)
 
@@ -112,15 +116,29 @@ class _CachedCore:
         # Force generate content hash
         _ = self.content_hash
         # Save to file system
-        path: AbsolutePath = os.path.join(self._cache_folder, f"{self.primary_key}.{self.file_extension}")
-        if isinstance(self.content, str):
-            with open(path, "w", encoding="utf-8") as f:
-                f.write(self.content)
-        elif isinstance(self.content, bytes):
-            with open(path, "wb") as f:
-                f.write(self.content)
+        path = self.cache_path
+        
+        if self.file_extension == self._bytes_extension_name:
+            to_write = self.content_bytes
         else:
-            Logger.error(f"Unknown content type, {type(self.content)}")
+            to_write = self.content_str.encode("utf-8")
+
+        with open(path, "wb") as f:
+            f.write(to_write)
+
+    def _get_raw_content(self) -> bytes:
+        if os.path.isfile(self.cache_path):
+            with open(self.cache_path, "rb") as f:
+                raw = f.read()
+
+            # Double check
+            if raw == "":
+                raise CacheCorrupted
+
+            return raw
+        else:
+            Logger.warning(f"Cannot find cache file at {self.cache_path}")
+            raise CacheNotFound
 
     @property
     def primary_key(self) -> HashKey:
@@ -144,47 +162,36 @@ class _CachedCore:
         return self._primary_key
 
     @property
-    def content(self) -> str|bytes:
-        """
-        Load content when called
-
-        Raises:
-            CacheNotFound
-            CacheCorrupted: Cache contains unexpected data
-
-        Returns:
-            str: The actual content
-        """
+    def content_str(self) -> str:
         if self._content == None:
-            # Read in the actual content
-            path: AbsolutePath = os.path.join(self._cache_folder, f"{self.primary_key}.{self.file_extension}")
-            if os.path.isfile(path):
-                if self.file_extension == "bytes":
-                    with open(path, "rb") as f:
-                        content = f.read()
-                else:
-                    with open(path, "r", encoding="utf-8") as f:
-                        content = f.read()
-            else:
-                # In the case of goofy situation
-                Logger.warning(f"Encounter corrupted cache file, {path}")
-                raise CacheNotFound
-            
-            if content == "":
-                Logger.warning(f"Cache, {path}, corrupted")
-                raise CacheCorrupted
-
-            # Save it to content
-            self._content = content
-
-            return content
+            self._content = self._get_raw_content().decode(encoding="utf-8")
+        elif isinstance(self._content, str):
+            pass
         else:
-            return self._content
+            Logger.error(f"Unexpected type for content, {type(self._content)}")
+            raise TypeError
+        return self._content
+
+    @property
+    def content_bytes(self) -> bytes:
+        if self._content == None:
+            self._content = self._get_raw_content()
+        elif isinstance(self._content, bytes):
+            pass
+        else:
+            Logger.error(f"Unexpected type for content, {type(self._content)}")
+            raise TypeError
+        return self._content
+
+    @cached_property
+    def cache_path(self) -> AbsolutePath:
+        path: AbsolutePath = os.path.join(self._cache_folder, f"{self.primary_key}.{self.file_extension}")
+        return path
 
     @property
     def content_hash(self) -> str:
-        if self._content_hash == "":
-            self._content_hash = generate_hash(self.content)
+        if self._content_hash == "" and self._content != None:
+            self._content_hash = generate_hash(self._content)
             Logger.debug(f"Generated content hash, {self._content_hash}")
         return self._content_hash
 
@@ -243,12 +250,12 @@ class Cached:
                 _time_to_live=time_to_live,
             )
         elif isinstance(content, bytes):
-            if file_extension != "bytes":
+            if file_extension != _CachedCore._bytes_extension_name:
                 Logger.warning(f"File extension should be 'bytes' for bytes input")
             core = _CachedCore(
                 identifier=identifier,
                 _content=content,
-                file_extension="bytes",
+                file_extension=_CachedCore._bytes_extension_name,
                 _time_to_live=time_to_live,
             )
         else:
@@ -261,8 +268,12 @@ class Cached:
         return self.core.identifier
 
     @property
-    def content(self) -> str|bytes:
-        return self.core.content
+    def content_str(self) -> str:
+        return self.core.content_str
+
+    @property
+    def content_bytes(self) -> bytes:
+        return self.core.content_bytes
 
     @property
     def isExpired(self) -> bool:
