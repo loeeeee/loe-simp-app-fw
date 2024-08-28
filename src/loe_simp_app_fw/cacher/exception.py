@@ -1,10 +1,10 @@
 class CacheMiss(Exception):
     pass
 
-class CacheCorrupted(Exception):
+class CacheCorrupted(CacheMiss):
     pass
 
-class CacheNotFound(Exception):
+class CacheNotFound(CacheMiss):
     pass
 
 class NotYetSetup(Exception):
