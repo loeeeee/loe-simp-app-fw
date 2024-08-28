@@ -1,8 +1,7 @@
 from dataclasses import dataclass, field
 import datetime
 from functools import cached_property, partial
-from os.path import isfile
-from typing import AnyStr, Self, TypeAlias, Dict, ClassVar, Optional, Literal
+from typing import Self, TypeAlias, Dict, ClassVar, Optional, Literal
 import hashlib
 import os
 
@@ -81,9 +80,10 @@ class _CachedCore:
         cls._cache_folder = cache_folder
 
         cls._isSetup = True
+        Logger.info("Cache Core setup complete")
 
     def __post_init__(self) -> None:
-        if not self._isSetup:
+        if not type(self)._isSetup:
             Logger.error(f"The Cached Entry not yet has its default configured")
             raise NotYetSetup
         return

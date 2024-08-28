@@ -171,13 +171,14 @@ class CacheManager:
         disable: bool = False, 
         **kwargs
         ) -> None:
-        cls.core.setup(
+        CacheMap.setup(
             cache_folder, 
             time_to_live, 
             neverExpire = neverExpire, 
             readOnly = readOnly, 
             disable = disable
         )
+        Logger.info("Cache manager setup complete")
 
     def append(self, cache: Cached, /) -> None:
         return self.core.append(cache)
