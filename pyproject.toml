@@ -17,7 +17,8 @@ classifiers = [
 ]
 dependencies = [
   "pyyaml",
-  "requests"
+  "requests",
+  "tabulate"
 ]
 keywords = ["framework", "logger", "config mangager"]
 dynamic = ["version"]
